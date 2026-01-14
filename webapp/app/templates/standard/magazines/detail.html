@@ -1,0 +1,113 @@
+{% extends "standard/base.html" %}
+<!--
+    Dettaglio Numero Rivista - Modalità Standard
+
+    Mostra un numero completo con:
+    - Metadati (mese, anno, stato)
+    - Lista articoli inclusi
+    - Pulsante genera PDF
+    - Link download PDF
+-->
+
+{% block title %}GEKO {{ magazine.numero }} - {{ magazine.mese }} {{ magazine.anno }}{% endblock %}
+
+{% block main %}
+<div class="magazine-detail">
+
+    <header class="magazine-header">
+        <div class="header-info">
+            <h1>GEKO Radio Magazine Nr. {{ magazine.numero }}</h1>
+            <p class="date">{{ magazine.mese }} {{ magazine.anno }}</p>
+            <span class="status status-{{ magazine.stato.value }}">
+                {{ magazine.stato.value|capitalize }}
+            </span>
+        </div>
+
+        <div class="header-actions">
+            {% if magazine.stato.value == 'bozza' %}
+            <button
+                class="btn btn-primary btn-large"
+                hx-post="/magazines/{{ magazine.id }}/build"
+                hx-target="#build-result"
+                hx-indicator="#build-loading"
+            >
+                🔨 Genera PDF
+            </button>
+            <span id="build-loading" class="htmx-indicator">Generando PDF...</span>
+            {% else %}
+            <a href="/magazines/{{ magazine.id }}/pdf" class="btn btn-success btn-large">
+                📥 Scarica PDF
+            </a>
+            {% endif %}
+        </div>
+    </header>
+
+    <div id="build-result"></div>
+
+    <!-- Editoriale -->
+    {% if magazine.editoriale %}
+    <section class="magazine-editorial">
+        <h2>Editoriale</h2>
+        <blockquote>
+            {{ magazine.editoriale }}
+            {% if magazine.editoriale_autore %}
+            <cite>— {{ magazine.editoriale_autore }}</cite>
+            {% endif %}
+        </blockquote>
+    </section>
+    {% endif %}
+
+    <!-- Articoli inclusi -->
+    <section class="magazine-articles">
+        <header class="section-header">
+            <h2>Articoli ({{ magazine.articles|length }})</h2>
+            {% if magazine.stato.value == 'bozza' %}
+            <a href="/articles/" class="btn btn-small btn-outline">+ Aggiungi articolo</a>
+            {% endif %}
+        </header>
+
+        {% if magazine.articles %}
+        <ol class="articles-list sortable">
+            {% for article in magazine.articles|sort(attribute='ordine') %}
+            <li class="article-item" data-id="{{ article.id }}">
+                <span class="order-handle">☰</span>
+                <div class="article-info">
+                    <strong>{{ article.titolo }}</strong>
+                    {% if article.autore %}
+                    <span class="author">{{ article.autore }}</span>
+                    {% endif %}
+                </div>
+                {% if article.sommario_llm %}
+                <span class="badge badge-success" title="Sommario: {{ article.sommario_llm }}">AI ✓</span>
+                {% else %}
+                <span class="badge badge-warning">Senza sommario</span>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ol>
+        {% else %}
+        <div class="empty-state">
+            <p>Nessun articolo in questo numero.</p>
+            <p>Vai alla <a href="/articles/">lista articoli</a> per aggiungerne.</p>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- Azioni -->
+    <div class="magazine-actions">
+        <a href="/magazines/" class="btn btn-secondary">← Torna all'archivio</a>
+
+        {% if magazine.stato.value == 'bozza' %}
+        <button
+            class="btn btn-danger"
+            hx-delete="/magazines/{{ magazine.id }}"
+            hx-confirm="Sei sicuro di voler eliminare questo numero? Tutti gli articoli associati verranno rimossi."
+            hx-target="body"
+        >
+            🗑️ Elimina numero
+        </button>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

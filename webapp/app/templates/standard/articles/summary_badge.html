@@ -1,0 +1,21 @@
+<!--
+    Badge sommario AI generato.
+
+    Partial restituito dopo la generazione del sommario.
+    Sostituisce il bottone "Genera sommario".
+
+    Variabili:
+    - article: oggetto Article aggiornato
+    - summary: dict con 'sommario' e 'keywords'
+-->
+<div class="ai-summary-badge">
+    <span class="badge badge-success">✓ Sommario generato</span>
+    <p class="summary-text">{{ summary.sommario }}</p>
+    {% if summary.keywords %}
+    <div class="keywords">
+        {% for kw in summary.keywords %}
+        <span class="keyword">{{ kw }}</span>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>

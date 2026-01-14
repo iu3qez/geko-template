@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+<!--
+    Template base per modalità STANDARD.
+
+    Include:
+    - Header con navigazione
+    - Sidebar con menu
+    - Area contenuto principale
+    - Footer
+
+    Layout pensato per utenti che preferiscono
+    un'interfaccia completa con tutte le opzioni visibili.
+-->
+
+{% block styles %}
+<link rel="stylesheet" href="/static/css/standard.css">
+{% endblock %}
+
+{% block body_class %}standard-mode{% endblock %}
+
+{% block content %}
+<div class="app-container">
+
+    <!-- HEADER -->
+    <header class="app-header">
+        <div class="header-left">
+            <a href="/" class="logo">
+                <span class="logo-icon">🦎</span>
+                <span class="logo-text">GEKO Magazine</span>
+            </a>
+        </div>
+        <nav class="header-nav">
+            <a href="/magazines/" class="nav-link">Numeri</a>
+            <a href="/articles/" class="nav-link">Articoli</a>
+            <a href="/simple" class="nav-link nav-link-simple">Modalità Semplice</a>
+        </nav>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="app-main">
+        {% block main %}{% endblock %}
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="app-footer">
+        <p>GEKO Radio Magazine - Mountain QRP Club</p>
+        <p><a href="https://www.mqc.it" target="_blank">www.mqc.it</a></p>
+    </footer>
+
+</div>
+{% endblock %}

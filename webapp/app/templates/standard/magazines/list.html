@@ -1,0 +1,66 @@
+{% extends "standard/base.html" %}
+<!--
+    Lista Numeri Rivista - Modalità Standard
+
+    Archivio di tutti i numeri con:
+    - Numero, mese, anno
+    - Stato (bozza/pubblicato)
+    - Conteggio articoli
+    - Link download PDF (se pubblicato)
+-->
+
+{% block title %}Archivio Numeri - GEKO Magazine{% endblock %}
+
+{% block main %}
+<div class="magazines-container">
+
+    <header class="page-header">
+        <h1>Archivio Numeri</h1>
+        <div class="header-actions">
+            <a href="/magazines/new" class="btn btn-primary">+ Nuovo Numero</a>
+        </div>
+    </header>
+
+    <div class="magazines-grid">
+        {% if magazines %}
+            {% for magazine in magazines %}
+            <article class="magazine-card {% if magazine.stato.value == 'pubblicato' %}published{% endif %}">
+                <div class="magazine-number">
+                    <span class="number">{{ magazine.numero }}</span>
+                </div>
+
+                <div class="magazine-info">
+                    <h3>GEKO {{ magazine.numero }}</h3>
+                    <p class="date">{{ magazine.mese }} {{ magazine.anno }}</p>
+
+                    <div class="stats">
+                        <span>{{ magazine.articles|length }} articoli</span>
+                        <span class="status status-{{ magazine.stato.value }}">
+                            {{ magazine.stato.value|capitalize }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="magazine-actions">
+                    <a href="/magazines/{{ magazine.id }}" class="btn btn-small">
+                        Apri
+                    </a>
+
+                    {% if magazine.stato.value == 'pubblicato' %}
+                    <a href="/magazines/{{ magazine.id }}/pdf" class="btn btn-small btn-success">
+                        📥 PDF
+                    </a>
+                    {% endif %}
+                </div>
+            </article>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <p>Nessun numero ancora.</p>
+                <a href="/magazines/new" class="btn btn-primary">Crea il primo numero</a>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

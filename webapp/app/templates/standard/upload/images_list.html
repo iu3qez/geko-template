@@ -1,0 +1,31 @@
+<!--
+    Lista immagini caricate.
+
+    Partial usato dopo upload multiplo.
+
+    Variabili:
+    - images: lista oggetti Image
+    - errors: lista stringhe errore (opzionale)
+-->
+
+{% if errors %}
+<div class="upload-errors">
+    <h4>Alcuni file non sono stati caricati:</h4>
+    <ul>
+        {% for error in errors %}
+        <li>{{ error }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% if images %}
+<div class="images-grid">
+    {% for image in images %}
+    {% include "standard/upload/image_item.html" %}
+    {% endfor %}
+</div>
+<p class="upload-success">✓ {{ images|length }} immagine/i caricate con successo</p>
+{% else %}
+<p class="upload-warning">Nessuna immagine caricata.</p>
+{% endif %}

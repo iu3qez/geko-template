@@ -1,0 +1,163 @@
+{% extends "standard/base.html" %}
+<!--
+    Form Articolo - Modalità Standard
+
+    Form per creare o modificare un articolo.
+    Include:
+    - Campi metadati (titolo, autore, ecc.)
+    - Editor markdown con textarea
+    - Preview in tempo reale (opzionale)
+
+    Variabili:
+    - article: oggetto Article (None per nuovo articolo)
+-->
+
+{% block title %}
+{% if article %}Modifica Articolo{% else %}Nuovo Articolo{% endif %} - GEKO Magazine
+{% endblock %}
+
+{% block main %}
+<div class="form-container">
+
+    <header class="page-header">
+        <h1>{% if article %}Modifica Articolo{% else %}Nuovo Articolo{% endif %}</h1>
+    </header>
+
+    <form
+        {% if article %}
+        hx-put="/articles/{{ article.id }}"
+        {% else %}
+        hx-post="/articles/"
+        {% endif %}
+        hx-target="#form-result"
+        class="article-form"
+    >
+        <!-- METADATI -->
+        <fieldset class="form-section">
+            <legend>Informazioni Articolo</legend>
+
+            <div class="form-group">
+                <label for="titolo">Titolo *</label>
+                <input
+                    type="text"
+                    id="titolo"
+                    name="titolo"
+                    value="{{ article.titolo if article else '' }}"
+                    required
+                    placeholder="Es: Costruiamo un RTX QRP per i 40m"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="sottotitolo">Sottotitolo</label>
+                <input
+                    type="text"
+                    id="sottotitolo"
+                    name="sottotitolo"
+                    value="{{ article.sottotitolo if article else '' }}"
+                    placeholder="Es: Un progetto semplice per iniziare"
+                >
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="autore">Nominativo Radio</label>
+                    <input
+                        type="text"
+                        id="autore"
+                        name="autore"
+                        value="{{ article.autore if article else '' }}"
+                        placeholder="Es: IU3QEZ"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="nome_autore">Nome</label>
+                    <input
+                        type="text"
+                        id="nome_autore"
+                        name="nome_autore"
+                        value="{{ article.nome_autore if article else '' }}"
+                        placeholder="Es: Simone"
+                    >
+                </div>
+            </div>
+        </fieldset>
+
+        <!-- CONTENUTO -->
+        <fieldset class="form-section">
+            <legend>Contenuto (Markdown)</legend>
+
+            <div class="form-group">
+                <label for="contenuto_md">
+                    Scrivi il contenuto in Markdown
+                    <a href="#" class="help-link" title="Guida Markdown">?</a>
+                </label>
+                <textarea
+                    id="contenuto_md"
+                    name="contenuto_md"
+                    rows="20"
+                    placeholder="Scrivi qui il tuo articolo in formato Markdown...
+
+## Sezione
+
+Testo normale con **grassetto** e *corsivo*.
+
+- Lista puntata
+- Altro elemento
+
+![Descrizione immagine](percorso/immagine.jpg)
+
+!!! nota &quot;Titolo Box&quot;
+Contenuto del box evidenza
+!!!"
+                >{{ article.contenuto_md if article else '' }}</textarea>
+            </div>
+
+            <!-- Help Markdown -->
+            <details class="markdown-help">
+                <summary>Guida rapida Markdown</summary>
+                <div class="help-content">
+                    <table>
+                        <tr><td><code># Titolo</code></td><td>Titolo principale</td></tr>
+                        <tr><td><code>## Sezione</code></td><td>Sottosezione</td></tr>
+                        <tr><td><code>**grassetto**</code></td><td><strong>grassetto</strong></td></tr>
+                        <tr><td><code>*corsivo*</code></td><td><em>corsivo</em></td></tr>
+                        <tr><td><code>- elemento</code></td><td>Lista puntata</td></tr>
+                        <tr><td><code>[testo](url)</code></td><td>Link</td></tr>
+                        <tr><td><code>![alt](path)</code></td><td>Immagine</td></tr>
+                    </table>
+                </div>
+            </details>
+        </fieldset>
+
+        <!-- AZIONI -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-large">
+                {% if article %}💾 Salva Modifiche{% else %}➕ Crea Articolo{% endif %}
+            </button>
+            <a href="/articles/" class="btn btn-secondary">Annulla</a>
+        </div>
+
+        <!-- Risultato (per feedback HTMX) -->
+        <div id="form-result"></div>
+
+    </form>
+
+    <!-- UPLOAD MARKDOWN (solo nuovo articolo) -->
+    {% if not article %}
+    <div class="alternative-upload">
+        <h3>Oppure importa da file</h3>
+        <form
+            hx-post="/upload/markdown"
+            hx-target="#form-result"
+            hx-encoding="multipart/form-data"
+        >
+            <input type="file" name="file" accept=".md" required>
+            <button type="submit" class="btn btn-outline">📤 Importa .md</button>
+        </form>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

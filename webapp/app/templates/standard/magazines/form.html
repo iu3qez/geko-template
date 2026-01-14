@@ -1,0 +1,106 @@
+{% extends "standard/base.html" %}
+<!--
+    Form Numero Rivista - Modalità Standard
+
+    Form per creare un nuovo numero della rivista.
+-->
+
+{% block title %}Nuovo Numero - GEKO Magazine{% endblock %}
+
+{% block main %}
+<div class="form-container">
+
+    <header class="page-header">
+        <h1>Nuovo Numero</h1>
+    </header>
+
+    <form hx-post="/magazines/" hx-target="#form-result" class="magazine-form">
+
+        <fieldset class="form-section">
+            <legend>Informazioni Numero</legend>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="numero">Numero *</label>
+                    <input
+                        type="text"
+                        id="numero"
+                        name="numero"
+                        required
+                        placeholder="Es: 68"
+                        pattern="[0-9]+"
+                    >
+                    <small>Numero progressivo della rivista</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="mese">Mese *</label>
+                    <select id="mese" name="mese" required>
+                        <option value="">Seleziona...</option>
+                        <option value="Gennaio">Gennaio</option>
+                        <option value="Febbraio">Febbraio</option>
+                        <option value="Marzo">Marzo</option>
+                        <option value="Aprile">Aprile</option>
+                        <option value="Maggio">Maggio</option>
+                        <option value="Giugno">Giugno</option>
+                        <option value="Luglio">Luglio</option>
+                        <option value="Agosto">Agosto</option>
+                        <option value="Settembre">Settembre</option>
+                        <option value="Ottobre">Ottobre</option>
+                        <option value="Novembre">Novembre</option>
+                        <option value="Dicembre">Dicembre</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="anno">Anno *</label>
+                    <input
+                        type="text"
+                        id="anno"
+                        name="anno"
+                        required
+                        placeholder="2025"
+                        pattern="[0-9]{4}"
+                        value="2025"
+                    >
+                </div>
+            </div>
+        </fieldset>
+
+        <fieldset class="form-section">
+            <legend>Editoriale (opzionale)</legend>
+
+            <div class="form-group">
+                <label for="editoriale">Testo Editoriale</label>
+                <textarea
+                    id="editoriale"
+                    name="editoriale"
+                    rows="6"
+                    placeholder="Scrivi qui l'editoriale per la copertina..."
+                ></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="editoriale_autore">Autore Editoriale</label>
+                <input
+                    type="text"
+                    id="editoriale_autore"
+                    name="editoriale_autore"
+                    placeholder="Es: Simone IU3QEZ"
+                >
+            </div>
+        </fieldset>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-large">
+                ➕ Crea Numero
+            </button>
+            <a href="/magazines/" class="btn btn-secondary">Annulla</a>
+        </div>
+
+        <div id="form-result"></div>
+
+    </form>
+
+</div>
+{% endblock %}

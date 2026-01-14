@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+<!--
+    Pagina errore 500 - Errore interno
+
+    Messaggio chiaro con istruzioni per l'utente.
+-->
+
+{% block title %}Errore - GEKO Magazine{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="/static/css/base.css">
+<style>
+    .error-page {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 2rem;
+    }
+
+    .error-icon {
+        font-size: 5rem;
+        margin-bottom: 1rem;
+    }
+
+    .error-code {
+        font-size: 4rem;
+        font-weight: 700;
+        color: var(--danger);
+        margin: 0;
+    }
+
+    .error-message {
+        font-size: 1.5rem;
+        color: var(--text-muted);
+        margin-bottom: 1rem;
+    }
+
+    .error-help {
+        max-width: 500px;
+        margin-bottom: 2rem;
+        padding: 1rem;
+        background: var(--geko-light);
+        border-radius: 8px;
+    }
+
+    .error-actions {
+        display: flex;
+        gap: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <div class="error-icon">⚠️</div>
+    <h1 class="error-code">500</h1>
+    <p class="error-message">Qualcosa è andato storto.</p>
+
+    <div class="error-help">
+        <p><strong>Cosa puoi fare:</strong></p>
+        <ul style="text-align: left;">
+            <li>Riprova tra qualche secondo</li>
+            <li>Torna alla pagina precedente</li>
+            <li>Contatta l'amministratore se il problema persiste</li>
+        </ul>
+    </div>
+
+    <div class="error-actions">
+        <a href="/" class="btn btn-primary">Torna alla Home</a>
+        <a href="javascript:history.back()" class="btn btn-secondary">← Indietro</a>
+    </div>
+</div>
+{% endblock %}

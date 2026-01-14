@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+<!--
+    Template base per modalità SEMPLICE (Accessibile).
+
+    Design ottimizzato per utenti con difficoltà motorie:
+    - Bottoni MOLTO grandi (min 60px)
+    - Alto contrasto
+    - Una azione principale per schermata
+    - Nessun scroll necessario
+    - Feedback chiaro e persistente
+
+    Testato per utenti con Parkinson.
+-->
+
+{% block styles %}
+<link rel="stylesheet" href="/static/css/simple.css">
+{% endblock %}
+
+{% block body_class %}simple-mode{% endblock %}
+
+{% block content %}
+<div class="simple-container">
+
+    <!-- HEADER MINIMO -->
+    <header class="simple-header">
+        <a href="/simple" class="logo-simple">🦎 GEKO</a>
+        <a href="/" class="switch-mode" title="Vai alla modalità completa">
+            Modalità Completa →
+        </a>
+    </header>
+
+    <!-- CONTENUTO PRINCIPALE -->
+    <main class="simple-main">
+        {% block simple_content %}{% endblock %}
+    </main>
+
+    <!-- FOOTER MINIMO -->
+    <footer class="simple-footer">
+        <p>Mountain QRP Club</p>
+    </footer>
+
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+# Output generati
+output/*.pdf
+*.pdf
+
+# File temporanei Typst
+*.typ.bak
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.env
+.venv
+env/
+venv/
+.eggs/
+*.egg-info/
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Immagini temporanee (mantieni quelle in assets/)
+*.ppm
+
+# Test files
+test*.typ
+test*.pdf
+
+
+.tldr
+.tldrignore

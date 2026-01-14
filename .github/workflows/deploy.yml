@@ -1,0 +1,140 @@
+# =============================================================================
+# GEKO Magazine - GitHub Actions CI/CD
+# =============================================================================
+#
+# Workflow automatico per:
+# 1. Build immagine Docker
+# 2. Push su GitHub Container Registry (ghcr.io)
+# 3. Deploy opzionale su server via SSH
+#
+# Secrets richiesti (Settings → Secrets → Actions):
+# - SERVER_HOST: IP o hostname del server (opzionale)
+# - SERVER_USER: Username SSH (opzionale)
+# - SSH_KEY: Chiave privata SSH (opzionale)
+#
+# Il GITHUB_TOKEN è automatico, non serve configurarlo.
+#
+# =============================================================================
+
+name: Build & Deploy GEKO
+
+on:
+  # Trigger su push al branch main
+  push:
+    branches: [main]
+    paths:
+      - 'webapp/**'
+      - '.github/workflows/deploy.yml'
+
+  # Trigger manuale da GitHub UI
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/geko-webapp
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job 1: Build e Push immagine Docker
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Login a GitHub Container Registry
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Genera tags e labels per l'immagine
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      # Setup BuildKit per build ottimizzato
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Build e push
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./webapp
+          file: ./webapp/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Sommario nel log
+      - name: Image summary
+        run: |
+          echo "### 🐳 Docker Image Built" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Pull con:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  # ---------------------------------------------------------------------------
+  # Job 2: Deploy su server (opzionale)
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Deploy to Server
+    runs-on: ubuntu-latest
+    needs: build
+
+    # Esegui solo se i secrets SSH sono configurati
+    if: ${{ vars.DEPLOY_ENABLED == 'true' }}
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script: |
+            echo "🚀 Deploying GEKO Magazine..."
+
+            # Vai alla directory del progetto
+            cd ${{ vars.DEPLOY_PATH || '/opt/geko' }}
+
+            # Pull nuova immagine
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+            # Aggiorna docker-compose per usare l'immagine da GHCR
+            # (oppure usa docker-compose pull se configurato)
+            docker-compose up -d --force-recreate webapp
+
+            echo "✅ Deploy completato!"
+
+      - name: Deploy summary
+        run: |
+          echo "### 🚀 Deployed to Server" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "L'app è stata deployata su \`${{ secrets.SERVER_HOST }}\`" >> $GITHUB_STEP_SUMMARY

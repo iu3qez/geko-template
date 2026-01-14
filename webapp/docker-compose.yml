@@ -1,0 +1,135 @@
+# =============================================================================
+# GEKO Magazine Web App - Docker Compose
+# =============================================================================
+#
+# Orchestrazione container per deploy semplice.
+#
+# Uso:
+#   # Avvio (sviluppo - con .env file)
+#   docker-compose up -d
+#
+#   # Avvio (produzione - con secrets)
+#   docker-compose --profile production up -d
+#
+#   # Logs
+#   docker-compose logs -f
+#
+#   # Stop
+#   docker-compose down
+#
+#   # Rebuild dopo modifiche
+#   docker-compose up -d --build
+#
+# Gestione Secrets (3 opzioni):
+#   1. File .env (sviluppo): ANTHROPIC_API_KEY=sk-...
+#   2. File secrets (produzione): secrets/anthropic_key.txt
+#   3. Variabile ambiente: ANTHROPIC_API_KEY=sk-... docker-compose up
+#
+# Volumi:
+#   - ./data: database SQLite e file caricati (persistente)
+#   - ../template.typ: template Typst (read-only)
+#   - ../assets: immagini template (read-only)
+#
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Web App principale
+  # ---------------------------------------------------------------------------
+  webapp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: geko-webapp
+    restart: unless-stopped
+
+    # Porte esposte
+    ports:
+      - "8000:8000"
+
+    # Secrets (montati in /run/secrets/)
+    secrets:
+      - anthropic_key
+
+    # Variabili ambiente
+    environment:
+      # API Key Claude - legge da file secrets se presente
+      # Altrimenti fallback a variabile ambiente diretta
+      - ANTHROPIC_API_KEY_FILE=/run/secrets/anthropic_key
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+
+      # Ambiente (development/production)
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+
+    # Volumi persistenti e shared
+    volumes:
+      # Database e file caricati (PERSISTENTE - non perdere!)
+      - ./data:/app/data
+
+      # Template Typst dalla directory parent (read-only)
+      - ../template.typ:/app/typst/template.typ:ro
+
+      # Assets (immagini, loghi) dalla directory parent (read-only)
+      - ../assets:/app/typst/assets:ro
+
+      # Directory output per PDF generati
+      - ./data/output:/app/data/output
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health').raise_for_status()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # Limiti risorse (opzionale, decommentare se necessario)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1'
+    #       memory: 512M
+
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# =============================================================================
+# Definizione Secrets
+# =============================================================================
+# I secrets vengono letti da file locali e montati in /run/secrets/
+# nel container. Più sicuro delle variabili ambiente.
+#
+# Setup:
+#   mkdir -p secrets
+#   echo "sk-ant-api03-xxxxx" > secrets/anthropic_key.txt
+#   chmod 600 secrets/anthropic_key.txt
+#
+# =============================================================================
+secrets:
+  anthropic_key:
+    file: ./secrets/anthropic_key.txt
+
+# =============================================================================
+# Note di deploy:
+#
+# 1. Authentik (reverse proxy):
+#    Configura Authentik per proteggere l'accesso.
+#    Esempio nginx upstream: proxy_pass http://localhost:8000;
+#
+# 2. Backup:
+#    Il volume ./data contiene il database SQLite e i file caricati.
+#    Eseguire backup regolari di questa directory.
+#
+# 3. HTTPS:
+#    Usa un reverse proxy (nginx, traefik, caddy) per terminazione SSL.
+#    L'app interna comunica solo HTTP sulla porta 8000.
+#
+# 4. Scaling:
+#    Per maggiore performance, aumentare workers in CMD Dockerfile:
+#    CMD ["uvicorn", "app.main:app", "--workers", "4", ...]
+#
+# =============================================================================

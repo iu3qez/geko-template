@@ -1,0 +1,1 @@
+"""GEKO Magazine Web App."""

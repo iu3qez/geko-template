@@ -1,0 +1,49 @@
+# =============================================================================
+# Docker Ignore - File esclusi dal build context
+# =============================================================================
+
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+venv
+ENV
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Test
+.pytest_cache
+.coverage
+htmlcov
+
+# Dati locali (montati come volume)
+data/
+*.db
+
+# Logs
+*.log
+
+# Env files (contengono segreti)
+.env
+.env.*
+!.env.example
+
+# Documentazione
+*.md
+!README.md
+
+# Build artifacts
+dist/
+build/
+*.egg-info

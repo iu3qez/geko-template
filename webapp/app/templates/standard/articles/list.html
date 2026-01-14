@@ -1,0 +1,40 @@
+{% extends "standard/base.html" %}
+<!--
+    Lista Articoli - Modalità Standard
+
+    Mostra tutti gli articoli con:
+    - Titolo e sottotitolo
+    - Autore
+    - Data creazione
+    - Stato sommario AI (generato/non generato)
+    - Azioni (modifica, elimina, genera sommario)
+-->
+
+{% block title %}Articoli - GEKO Magazine{% endblock %}
+
+{% block main %}
+<div class="articles-container">
+
+    <header class="page-header">
+        <h1>Articoli</h1>
+        <div class="header-actions">
+            <a href="/articles/new" class="btn btn-primary">+ Nuovo Articolo</a>
+        </div>
+    </header>
+
+    <!-- Lista articoli (aggiornata via HTMX) -->
+    <div id="articles-list" class="articles-list">
+        {% if articles %}
+            {% for article in articles %}
+                {% include "standard/articles/list_item.html" %}
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <p>Nessun articolo ancora.</p>
+                <a href="/articles/new" class="btn btn-primary">Crea il primo articolo</a>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

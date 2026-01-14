@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="it">
+<!--
+    GEKO Magazine Web App - Template Base
+
+    Questo template definisce la struttura comune a tutte le pagine.
+    Include:
+    - Meta tags e viewport per responsive
+    - CSS globali (standard o accessibile)
+    - HTMX per interattività senza JS complesso
+    - Alpine.js per stato locale leggero
+
+    Blocchi disponibili per override:
+    - title: Titolo pagina
+    - styles: CSS aggiuntivi
+    - content: Contenuto principale
+    - scripts: JavaScript aggiuntivi
+-->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="GEKO Radio Magazine - Mountain QRP Club">
+
+    <title>{% block title %}GEKO Magazine{% endblock %}</title>
+
+    <!-- HTMX - Interattività dichiarativa -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Alpine.js - Stato locale leggero -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- CSS Base -->
+    <link rel="stylesheet" href="/static/css/base.css">
+
+    {% block styles %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+    {% block content %}{% endblock %}
+
+    {% block scripts %}{% endblock %}
+
+</body>
+</html>

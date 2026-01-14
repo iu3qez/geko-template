@@ -1,0 +1,46 @@
+{% extends "simple/base.html" %}
+<!--
+    Homepage - Modalità Semplice
+
+    Solo 3 bottoni grandi:
+    1. Carica Articolo
+    2. Genera Rivista
+    3. Scarica PDF
+
+    Design per massima accessibilità.
+-->
+
+{% block title %}GEKO Magazine - Modalità Semplice{% endblock %}
+
+{% block simple_content %}
+<div class="simple-home">
+
+    <h1 class="simple-title">Cosa vuoi fare?</h1>
+
+    <div class="big-buttons">
+
+        <!-- CARICA ARTICOLO -->
+        <a href="/simple/upload" class="big-button big-button-primary">
+            <span class="big-icon">📄</span>
+            <span class="big-text">CARICA ARTICOLO</span>
+            <span class="big-hint">Carica un file .md</span>
+        </a>
+
+        <!-- GENERA RIVISTA -->
+        <a href="/simple/generate" class="big-button big-button-secondary">
+            <span class="big-icon">📰</span>
+            <span class="big-text">GENERA RIVISTA</span>
+            <span class="big-hint">Crea il PDF</span>
+        </a>
+
+        <!-- ARCHIVIO -->
+        <a href="/magazines/" class="big-button big-button-tertiary">
+            <span class="big-icon">📚</span>
+            <span class="big-text">ARCHIVIO</span>
+            <span class="big-hint">Numeri precedenti</span>
+        </a>
+
+    </div>
+
+</div>
+{% endblock %}

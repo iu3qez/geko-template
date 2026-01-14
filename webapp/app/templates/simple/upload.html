@@ -1,0 +1,87 @@
+{% extends "simple/base.html" %}
+<!--
+    Upload Articolo - Modalità Semplice
+
+    Interfaccia minimale:
+    - Una grande area di drop
+    - Un bottone per selezionare file
+    - Feedback chiaro
+
+    Ottimizzato per chi ha difficoltà con il mouse.
+-->
+
+{% block title %}Carica Articolo - GEKO Magazine{% endblock %}
+
+{% block simple_content %}
+<div class="simple-upload">
+
+    <h1 class="simple-title">Carica un Articolo</h1>
+
+    <form
+        hx-post="/upload/markdown"
+        hx-target="#upload-result"
+        hx-encoding="multipart/form-data"
+        class="upload-form"
+    >
+        <!-- Area upload grande -->
+        <div class="upload-area" id="upload-area">
+            <span class="upload-icon">📄</span>
+            <p class="upload-text">Clicca qui per scegliere un file</p>
+            <p class="upload-hint">oppure trascinalo qui</p>
+
+            <input
+                type="file"
+                name="file"
+                id="file-input"
+                accept=".md,.txt"
+                required
+                class="file-input"
+            >
+        </div>
+
+        <!-- Nome file selezionato -->
+        <div id="file-name" class="file-name-display"></div>
+
+        <!-- Bottone conferma (appare dopo selezione) -->
+        <button type="submit" class="big-button big-button-primary upload-submit" id="submit-btn" disabled>
+            <span class="big-icon">✓</span>
+            <span class="big-text">CARICA</span>
+        </button>
+    </form>
+
+    <!-- Risultato -->
+    <div id="upload-result" class="upload-result"></div>
+
+    <!-- Torna indietro -->
+    <a href="/simple" class="back-link">← Torna al menu</a>
+
+</div>
+
+<script>
+// Script minimale per feedback upload
+document.getElementById('file-input').addEventListener('change', function(e) {
+    const fileName = e.target.files[0]?.name || '';
+    document.getElementById('file-name').textContent = fileName ? '📎 ' + fileName : '';
+    document.getElementById('submit-btn').disabled = !fileName;
+});
+
+// Drag & drop
+const uploadArea = document.getElementById('upload-area');
+uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('dragover');
+});
+uploadArea.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('dragover');
+});
+uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (files.length) {
+        document.getElementById('file-input').files = files;
+        document.getElementById('file-input').dispatchEvent(new Event('change'));
+    }
+});
+</script>
+{% endblock %}

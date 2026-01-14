@@ -1,0 +1,67 @@
+{% extends "standard/base.html" %}
+<!--
+    Homepage - Modalità Standard
+
+    Dashboard principale con:
+    - Statistiche rapide
+    - Azioni principali
+    - Numeri recenti
+-->
+
+{% block title %}GEKO Magazine - Home{% endblock %}
+
+{% block main %}
+<div class="home-container">
+
+    <!-- HERO SECTION -->
+    <section class="hero">
+        <h1>Benvenuto in GEKO Magazine</h1>
+        <p class="hero-subtitle">Crea e gestisci i numeri del GEKO Radio Magazine</p>
+    </section>
+
+    <!-- AZIONI RAPIDE -->
+    <section class="quick-actions">
+        <h2>Cosa vuoi fare?</h2>
+
+        <div class="actions-grid">
+            <!-- Nuovo Numero -->
+            <a href="/magazines/new" class="action-card action-primary">
+                <span class="action-icon">📰</span>
+                <span class="action-title">Nuovo Numero</span>
+                <span class="action-desc">Crea un nuovo numero della rivista</span>
+            </a>
+
+            <!-- Nuovo Articolo -->
+            <a href="/articles/new" class="action-card">
+                <span class="action-icon">✍️</span>
+                <span class="action-title">Nuovo Articolo</span>
+                <span class="action-desc">Scrivi o importa un articolo</span>
+            </a>
+
+            <!-- Carica File -->
+            <a href="/articles/new" class="action-card">
+                <span class="action-icon">📤</span>
+                <span class="action-title">Carica Markdown</span>
+                <span class="action-desc">Importa articolo da file .md</span>
+            </a>
+
+            <!-- Archivio -->
+            <a href="/magazines/" class="action-card">
+                <span class="action-icon">📚</span>
+                <span class="action-title">Archivio Numeri</span>
+                <span class="action-desc">Consulta i numeri passati</span>
+            </a>
+        </div>
+    </section>
+
+    <!-- INFO BOX -->
+    <section class="info-box">
+        <h3>Hai bisogno di un'interfaccia più semplice?</h3>
+        <p>
+            Se preferisci un'interfaccia con bottoni più grandi e meno opzioni,
+            usa la <a href="/simple">Modalità Semplice</a>.
+        </p>
+    </section>
+
+</div>
+{% endblock %}
