@@ -65,7 +65,22 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.geko-rtr.entrypoints=websecure"
 
+        - "traefik.http.routers.geko-rtr.rule=Host(`geko.fabris.me`)"
+
+        - "traefik.http.routers.geko-rtr.middlewares=middlewares-authentik@file"
+        # - traefik.http.services.geko-svc.loadbalancer.server.port=80
+
+    networks:
+      traefik:
 secrets:
   anthropic_key:
     file: ./secrets/anthropic_key.txt
+networks:
+  traefik:
+    external: true
+    name: traefik
+# Rete esterna condivisa con Traefik per routing e SSL
