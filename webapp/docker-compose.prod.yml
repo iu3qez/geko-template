@@ -1,0 +1,71 @@
+# =============================================================================
+# GEKO Magazine - Docker Compose PRODUZIONE
+# =============================================================================
+#
+# Usa l'immagine pre-buildata da GitHub Container Registry (GHCR).
+# Non fa build locale - scarica l'immagine già pronta.
+#
+# Setup iniziale (una volta):
+#   1. Crea secrets:
+#      mkdir -p secrets
+#      echo "sk-ant-api03-xxx" > secrets/anthropic_key.txt
+#      chmod 600 secrets/anthropic_key.txt
+#
+#   2. Login a GHCR (se repo privato):
+#      echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
+#
+# Uso:
+#   # Pull e avvio
+#   docker-compose -f docker-compose.prod.yml pull
+#   docker-compose -f docker-compose.prod.yml up -d
+#
+#   # Aggiornamento (dopo nuovo push su GitHub)
+#   docker-compose -f docker-compose.prod.yml pull
+#   docker-compose -f docker-compose.prod.yml up -d --force-recreate
+#
+# =============================================================================
+
+services:
+  webapp:
+    # ===========================================
+    # IMPORTANTE: Modifica con il tuo username!
+    # ===========================================
+    image: ghcr.io/TUO-USERNAME/geko-template/geko-webapp:latest
+
+    container_name: geko-webapp
+    restart: unless-stopped
+
+    ports:
+      - "8000:8000"
+
+    secrets:
+      - anthropic_key
+
+    environment:
+      - ANTHROPIC_API_KEY_FILE=/run/secrets/anthropic_key
+      - ENVIRONMENT=production
+
+    volumes:
+      # Database e file caricati (PERSISTENTE)
+      - ./data:/app/data
+
+      # Template Typst (copia locale o monta da altra posizione)
+      - ./typst/template.typ:/app/typst/template.typ:ro
+      - ./assets:/app/typst/assets:ro
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health').raise_for_status()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+secrets:
+  anthropic_key:
+    file: ./secrets/anthropic_key.txt
