@@ -91,8 +91,8 @@ class MagazineBuilder:
         """Generate complete Typst document."""
         parts = []
 
-        # Import template
-        parts.append('#import "template.typ": *')
+        # Import template (path relativo da generated/ a typst/)
+        parts.append('#import "../template.typ": *')
         parts.append('')
 
         # Cover page (if we have highlights)
