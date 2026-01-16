@@ -6,10 +6,16 @@ import typst
 
 # Paths
 WEBAPP_DIR = Path(__file__).parent.parent.parent
-PROJECT_ROOT = WEBAPP_DIR.parent  # geko-template/
 TYPST_DIR = WEBAPP_DIR / "typst"
-TEMPLATE_DIR = PROJECT_ROOT  # template.typ is in project root
 OUTPUT_DIR = WEBAPP_DIR / "data" / "output"
+
+# Determina dove cercare template.typ:
+# - In Docker: /app/typst/template.typ (montato via volume)
+# - In locale: ../template.typ (nella root del progetto)
+if (TYPST_DIR / "template.typ").exists():
+    TEMPLATE_DIR = TYPST_DIR  # Docker: template montato in typst/
+else:
+    TEMPLATE_DIR = WEBAPP_DIR.parent  # Locale: template nella root progetto
 
 
 class MagazineBuilder:
