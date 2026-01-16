@@ -118,5 +118,72 @@
 
     </form>
 
+    <!-- Strumenti AI -->
+    <fieldset class="form-section" style="margin-top: 2rem;">
+        <legend>Strumenti AI</legend>
+
+        <div class="form-group">
+            <label>Rigenera didascalie immagini</label>
+            <p class="form-hint" style="margin-bottom: 1rem;">
+                Genera automaticamente didascalie per tutte le immagini caricate usando Claude Vision.
+                Le immagini verranno anche rinominate con nomi descrittivi.
+                <strong>Attenzione:</strong> questa operazione può richiedere tempo e consumare token API.
+            </p>
+            <button
+                type="button"
+                class="btn btn-secondary"
+                id="regenerate-captions-btn"
+                onclick="regenerateCaptions()"
+            >
+                🔄 Rigenera tutte le didascalie
+            </button>
+            <div id="regenerate-result" style="margin-top: 1rem;"></div>
+        </div>
+    </fieldset>
+
 </div>
+
+<script>
+async function regenerateCaptions() {
+    const btn = document.getElementById('regenerate-captions-btn');
+    const result = document.getElementById('regenerate-result');
+
+    if (!confirm('Sei sicuro? Questa operazione rigenererà le didascalie di TUTTE le immagini e le rinominerà.')) {
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Elaborazione in corso...';
+    result.innerHTML = '<p class="text-muted">Attendere, generazione didascalie in corso...</p>';
+
+    try {
+        const response = await fetch('/upload/regenerate-captions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await response.json();
+
+        if (data.status === 'completed') {
+            const stats = data.stats;
+            result.innerHTML = `
+                <div class="alert alert-success">
+                    <strong>Completato!</strong><br>
+                    Totale immagini: ${stats.total}<br>
+                    Aggiornate: ${stats.success}<br>
+                    Saltate: ${stats.skipped}<br>
+                    Errori: ${stats.errors}
+                </div>
+            `;
+        } else {
+            result.innerHTML = '<div class="alert alert-error">Errore durante l\'elaborazione</div>';
+        }
+    } catch (error) {
+        result.innerHTML = `<div class="alert alert-error">Errore: ${error.message}</div>`;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🔄 Rigenera tutte le didascalie';
+    }
+}
+</script>
 {% endblock %}

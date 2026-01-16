@@ -24,6 +24,9 @@ Limiti:
 """
 
 import uuid
+import base64
+import re
+import unicodedata
 from pathlib import Path
 from typing import Optional
 
@@ -39,6 +42,7 @@ from datetime import datetime, timedelta
 from app.database import get_db
 from app.models import Image as ImageModel, Article, Magazine, MagazineStatus
 from app.services.converter import MarkdownToTypstConverter
+from app.services.llm import generate_image_caption
 
 router = APIRouter(prefix="/upload", tags=["upload"])
 
@@ -51,6 +55,24 @@ MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 MAX_IMAGE_DIMENSION = 2000  # pixel
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+
+
+def slugify(text: str) -> str:
+    """
+    Converte un testo in slug per nome file.
+
+    Es: "RTX QRP autocostruito per i 40m" -> "rtx-qrp-autocostruito-per-i-40m"
+    """
+    # Normalizza unicode (è -> e)
+    text = unicodedata.normalize('NFKD', text)
+    text = text.encode('ascii', 'ignore').decode('ascii')
+    # Minuscolo
+    text = text.lower()
+    # Sostituisci spazi e caratteri non alfanumerici con trattini
+    text = re.sub(r'[^a-z0-9]+', '-', text)
+    # Rimuovi trattini multipli e agli estremi
+    text = re.sub(r'-+', '-', text).strip('-')
+    return text[:50] if text else "immagine"  # Max 50 caratteri
 
 
 def validate_image_file(file: UploadFile) -> None:
@@ -123,30 +145,29 @@ async def upload_image(
     request: Request,
     file: UploadFile = File(...),
     article_id: Optional[int] = Form(None),
+    auto_caption: bool = Form(True),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Carica una singola immagine.
+    Carica una singola immagine con didascalia automatica.
 
     L'immagine viene validata, eventualmente ridimensionata,
-    e salvata con un nome univoco (UUID) per evitare collisioni.
+    e la didascalia generata da Claude viene usata per il nome file.
 
     Args:
         file: Il file immagine da caricare
         article_id: ID articolo a cui associare l'immagine (opzionale)
+        auto_caption: Se True, genera didascalia con Claude Vision
 
     Returns:
         HTML partial con l'immagine caricata (per HTMX)
     """
     validate_image_file(file)
 
-    # Genera nome univoco
     original_filename = file.filename or "image"
     ext = Path(original_filename).suffix.lower()
-    unique_filename = f"{uuid.uuid4()}{ext}"
-    file_path = IMAGES_DIR / unique_filename
 
-    # Salva file
+    # Leggi contenuto file
     content = await file.read()
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(
@@ -154,25 +175,51 @@ async def upload_image(
             detail=f"File troppo grande. Massimo: {MAX_FILE_SIZE // (1024*1024)}MB"
         )
 
+    # Genera didascalia automatica con Claude Vision
+    caption = ""
+    if auto_caption:
+        try:
+            image_base64 = base64.b64encode(content).decode('utf-8')
+            media_type = file.content_type or "image/jpeg"
+            caption_result = await generate_image_caption(image_base64, media_type)
+            caption = caption_result.get("caption", "")
+            caption_slug = caption_result.get("caption_slug", "")
+
+            # Usa la didascalia come nome file se disponibile
+            if caption_slug:
+                # Aggiungi suffisso univoco per evitare collisioni
+                unique_suffix = uuid.uuid4().hex[:8]
+                unique_filename = f"{caption_slug}-{unique_suffix}{ext}"
+            else:
+                unique_filename = f"{uuid.uuid4()}{ext}"
+        except Exception as e:
+            print(f"Errore generazione didascalia: {e}")
+            unique_filename = f"{uuid.uuid4()}{ext}"
+    else:
+        unique_filename = f"{uuid.uuid4()}{ext}"
+
+    file_path = IMAGES_DIR / unique_filename
+
+    # Salva file
     file_path.write_bytes(content)
 
     # Ridimensiona se necessario
     try:
         resize_image_if_needed(file_path)
     except Exception as e:
-        # Se il ridimensionamento fallisce, elimina il file
         file_path.unlink(missing_ok=True)
         raise HTTPException(
             status_code=400,
             detail=f"Errore elaborazione immagine: {str(e)}"
         )
 
-    # Salva nel database
+    # Salva nel database con didascalia
     image = ImageModel(
         filename=unique_filename,
         original_filename=original_filename,
         path=str(file_path.relative_to(IMAGES_DIR.parent.parent)),
         article_id=article_id,
+        alt_text=caption,
     )
     db.add(image)
     await db.commit()
@@ -192,23 +239,20 @@ async def upload_image_editor(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Carica immagine dall'editor Markdown.
+    Carica immagine dall'editor Markdown con didascalia automatica.
 
     Endpoint JSON per integrazione con EasyMDE.
-    Ritorna URL dell'immagine per inserimento nel testo.
+    Genera automaticamente una didascalia per l'immagine.
 
     Returns:
-        JSON: {"url": "/images/filename.jpg"}
+        JSON: {"url": "/images/filename.jpg", "caption": "Didascalia generata"}
     """
     validate_image_file(file)
 
-    # Genera nome univoco
     original_filename = file.filename or "image"
     ext = Path(original_filename).suffix.lower()
-    unique_filename = f"{uuid.uuid4()}{ext}"
-    file_path = IMAGES_DIR / unique_filename
 
-    # Salva file
+    # Leggi contenuto file
     content = await file.read()
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(
@@ -216,6 +260,27 @@ async def upload_image_editor(
             detail=f"File troppo grande. Massimo: {MAX_FILE_SIZE // (1024*1024)}MB"
         )
 
+    # Genera didascalia automatica con Claude Vision
+    caption = ""
+    try:
+        image_base64 = base64.b64encode(content).decode('utf-8')
+        media_type = file.content_type or "image/jpeg"
+        caption_result = await generate_image_caption(image_base64, media_type)
+        caption = caption_result.get("caption", "")
+        caption_slug = caption_result.get("caption_slug", "")
+
+        if caption_slug:
+            unique_suffix = uuid.uuid4().hex[:8]
+            unique_filename = f"{caption_slug}-{unique_suffix}{ext}"
+        else:
+            unique_filename = f"{uuid.uuid4()}{ext}"
+    except Exception as e:
+        print(f"Errore generazione didascalia: {e}")
+        unique_filename = f"{uuid.uuid4()}{ext}"
+
+    file_path = IMAGES_DIR / unique_filename
+
+    # Salva file
     file_path.write_bytes(content)
 
     # Ridimensiona se necessario
@@ -228,21 +293,23 @@ async def upload_image_editor(
             detail=f"Errore elaborazione immagine: {str(e)}"
         )
 
-    # Salva nel database (opzionale per editor)
+    # Salva nel database con didascalia
     image = ImageModel(
         filename=unique_filename,
         original_filename=original_filename,
         path=str(file_path.relative_to(IMAGES_DIR.parent.parent)),
         article_id=article_id,
+        alt_text=caption,
     )
     db.add(image)
     await db.commit()
 
-    # Ritorna URL per l'editor
+    # Ritorna URL e didascalia per l'editor
     return JSONResponse({
         "url": f"/images/{unique_filename}",
         "filename": unique_filename,
-        "original": original_filename
+        "original": original_filename,
+        "caption": caption
     })
 
 
@@ -553,3 +620,91 @@ async def image_library_grid(
         "standard/upload/library_grid.html",
         {"request": request, "images": images}
     )
+
+
+@router.post("/regenerate-captions")
+async def regenerate_all_captions(
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Rigenera le didascalie per tutte le immagini esistenti.
+
+    Utile per aggiornare immagini caricate prima dell'introduzione
+    della funzionalità di auto-captioning.
+
+    Returns:
+        JSON con statistiche: totale, successi, errori
+    """
+    # Recupera tutte le immagini
+    result = await db.execute(select(ImageModel))
+    images = result.scalars().all()
+
+    stats = {"total": len(images), "success": 0, "errors": 0, "skipped": 0}
+    updated_images = []
+
+    for image in images:
+        try:
+            # Leggi file immagine
+            file_path = IMAGES_DIR / image.filename
+            if not file_path.exists():
+                stats["skipped"] += 1
+                continue
+
+            content = file_path.read_bytes()
+            image_base64 = base64.b64encode(content).decode('utf-8')
+
+            # Determina media type dall'estensione
+            ext = file_path.suffix.lower()
+            media_types = {
+                ".jpg": "image/jpeg",
+                ".jpeg": "image/jpeg",
+                ".png": "image/png",
+                ".gif": "image/gif",
+                ".webp": "image/webp"
+            }
+            media_type = media_types.get(ext, "image/jpeg")
+
+            # Genera nuova didascalia
+            caption_result = await generate_image_caption(image_base64, media_type)
+            caption = caption_result.get("caption", "")
+            caption_slug = caption_result.get("caption_slug", "")
+
+            if caption:
+                # Aggiorna alt_text nel database
+                image.alt_text = caption
+
+                # Rinomina file se abbiamo uno slug
+                if caption_slug:
+                    unique_suffix = uuid.uuid4().hex[:8]
+                    new_filename = f"{caption_slug}-{unique_suffix}{ext}"
+                    new_path = IMAGES_DIR / new_filename
+
+                    # Rinomina file su disco
+                    file_path.rename(new_path)
+
+                    # Aggiorna database
+                    image.filename = new_filename
+                    image.path = str(new_path.relative_to(IMAGES_DIR.parent.parent))
+
+                updated_images.append({
+                    "id": image.id,
+                    "old_filename": file_path.name,
+                    "new_filename": image.filename,
+                    "caption": caption
+                })
+                stats["success"] += 1
+            else:
+                stats["skipped"] += 1
+
+        except Exception as e:
+            print(f"Errore rigenerazione didascalia per {image.filename}: {e}")
+            stats["errors"] += 1
+
+    # Salva tutte le modifiche
+    await db.commit()
+
+    return JSONResponse({
+        "status": "completed",
+        "stats": stats,
+        "updated": updated_images
+    })

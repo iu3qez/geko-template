@@ -170,3 +170,107 @@ async def generate_article_summary(content: str, title: str) -> dict:
     """Convenience function for generating a single summary."""
     service = get_summary_service()
     return await service.generate_summary(content, title)
+
+
+async def generate_image_caption(image_base64: str, media_type: str) -> dict:
+    """
+    Generate a descriptive caption for an image using Claude Vision.
+
+    Context: GEKO Radio Magazine - Italian amateur radio (radioamatori) publication.
+    The LLM knows this context to better interpret radio equipment, antennas, etc.
+
+    Args:
+        image_base64: Base64-encoded image data
+        media_type: MIME type (e.g., "image/jpeg", "image/png")
+
+    Returns:
+        dict with 'caption' (Italian), 'caption_slug' (for filename), 'keywords'
+    """
+    service = get_summary_service()
+
+    if not service.api_key:
+        return {
+            "caption": "Immagine",
+            "caption_slug": "immagine",
+            "keywords": []
+        }
+
+    prompt = """Analizza questa immagine per una rivista radioamatoriale italiana (GEKO Radio Magazine).
+
+CONTESTO: Rivista per radioamatori del Mountain QRP Club. Le immagini tipicamente mostrano:
+- Apparati radio (RTX, ricetrasmettitori, QRP)
+- Antenne (dipoli, verticali, yagi, loop magnetiche)
+- Componenti elettronici (condensatori, bobine, PCB)
+- Attività in portatile (SOTA, POTA, field day)
+- Strumenti di misura (oscilloscopi, analizzatori, ROSmetri)
+- Schemi elettrici e circuiti
+- Radioamatori in attività
+
+COMPITO: Genera una didascalia descrittiva in italiano (max 8 parole).
+La didascalia deve essere concisa ma informativa, adatta come nome file.
+
+Rispondi SOLO con JSON valido:
+{"caption": "Didascalia breve in italiano", "caption_slug": "didascalia-per-filename", "keywords": ["keyword1", "keyword2"]}
+
+Esempi di didascalie corrette:
+- "RTX QRP autocostruito per i 40 metri"
+- "Antenna verticale portatile per attivazione SOTA"
+- "Schema elettrico del VFO a quarzo"
+- "Postazione radio durante il field day"
+- "Dettaglio del circuito mixer bilanciato"
+"""
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                service.base_url,
+                headers={
+                    "x-api-key": service.api_key,
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json",
+                },
+                json={
+                    "model": service.model,
+                    "max_tokens": 200,
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "image",
+                                    "source": {
+                                        "type": "base64",
+                                        "media_type": media_type,
+                                        "data": image_base64
+                                    }
+                                },
+                                {
+                                    "type": "text",
+                                    "text": prompt
+                                }
+                            ]
+                        }
+                    ]
+                },
+                timeout=30.0
+            )
+            response.raise_for_status()
+            result = response.json()
+
+            text = result["content"][0]["text"]
+
+            # Parse JSON from response
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0]
+            elif "```" in text:
+                text = text.split("```")[1].split("```")[0]
+
+            return json.loads(text.strip())
+
+    except Exception as e:
+        print(f"Error generating image caption: {e}")
+        return {
+            "caption": "Immagine",
+            "caption_slug": "immagine",
+            "keywords": []
+        }
