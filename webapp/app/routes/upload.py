@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from PIL import Image as PILImage  # Alias per evitare conflitto con app.models.Image
@@ -180,6 +180,67 @@ async def upload_image(
         "standard/upload/image_item.html",
         {"request": request, "image": image}
     )
+
+
+@router.post("/image/editor")
+async def upload_image_editor(
+    file: UploadFile = File(...),
+    article_id: Optional[int] = Form(None),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Carica immagine dall'editor Markdown.
+
+    Endpoint JSON per integrazione con EasyMDE.
+    Ritorna URL dell'immagine per inserimento nel testo.
+
+    Returns:
+        JSON: {"url": "/images/filename.jpg"}
+    """
+    validate_image_file(file)
+
+    # Genera nome univoco
+    original_filename = file.filename or "image"
+    ext = Path(original_filename).suffix.lower()
+    unique_filename = f"{uuid.uuid4()}{ext}"
+    file_path = IMAGES_DIR / unique_filename
+
+    # Salva file
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File troppo grande. Massimo: {MAX_FILE_SIZE // (1024*1024)}MB"
+        )
+
+    file_path.write_bytes(content)
+
+    # Ridimensiona se necessario
+    try:
+        resize_image_if_needed(file_path)
+    except Exception as e:
+        file_path.unlink(missing_ok=True)
+        raise HTTPException(
+            status_code=400,
+            detail=f"Errore elaborazione immagine: {str(e)}"
+        )
+
+    # Salva nel database (opzionale per editor)
+    image = ImageModel(
+        filename=unique_filename,
+        original_filename=original_filename,
+        path=str(file_path.relative_to(IMAGES_DIR.parent.parent)),
+        article_id=article_id,
+    )
+    db.add(image)
+    await db.commit()
+
+    # Ritorna URL per l'editor
+    return JSONResponse({
+        "url": f"/images/{unique_filename}",
+        "filename": unique_filename,
+        "original": original_filename
+    })
 
 
 @router.post("/images", response_class=HTMLResponse)

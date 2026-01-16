@@ -5,15 +5,54 @@
     Form per creare o modificare un articolo.
     Include:
     - Campi metadati (titolo, autore, ecc.)
-    - Editor markdown con textarea
-    - Preview in tempo reale (opzionale)
+    - Editor markdown WYSIWYG (EasyMDE) o textarea semplice
+    - Preview in tempo reale
 
     Variabili:
     - article: oggetto Article (None per nuovo articolo)
+
+    Editor:
+    - WYSIWYG: toolbar, preview split, drag&drop immagini
+    - Plain: textarea semplice per chi preferisce
+    - Toggle salvato in localStorage
 -->
 
 {% block title %}
 {% if article %}Modifica Articolo{% else %}Nuovo Articolo{% endif %} - GEKO Magazine
+{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<!-- EasyMDE CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+<style>
+    /* Personalizzazione editor */
+    .EasyMDEContainer {
+        border-radius: var(--radius-md);
+    }
+    .EasyMDEContainer .CodeMirror {
+        border-radius: 0 0 var(--radius-md) var(--radius-md);
+        min-height: 300px;
+    }
+    .editor-toolbar {
+        border-radius: var(--radius-md) var(--radius-md) 0 0;
+        background: var(--geko-light);
+    }
+    .editor-toolbar button.active,
+    .editor-toolbar button:hover {
+        background: var(--geko-gold);
+        color: white;
+    }
+    .editor-mode-toggle {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: var(--space-sm);
+    }
+    .editor-mode-toggle button {
+        font-size: 0.875rem;
+        padding: 4px 8px;
+    }
+</style>
 {% endblock %}
 
 {% block main %}
@@ -88,16 +127,24 @@
         <fieldset class="form-section">
             <legend>Contenuto (Markdown)</legend>
 
+            <!-- Toggle modalità editor -->
+            <div class="editor-mode-toggle">
+                <button type="button" class="btn btn-small btn-outline" onclick="GekoEditor.toggle()">
+                    🔄 Cambia Editor
+                </button>
+            </div>
+
             <div class="form-group">
                 <label for="contenuto_md">
-                    Scrivi il contenuto in Markdown
-                    <a href="#" class="help-link" title="Guida Markdown">?</a>
+                    Scrivi il contenuto
+                    <span class="text-muted">(con toolbar e preview)</span>
                 </label>
                 <textarea
                     id="contenuto_md"
                     name="contenuto_md"
                     rows="20"
-                    placeholder="Scrivi qui il tuo articolo in formato Markdown...
+                    data-editor="wysiwyg"
+                    placeholder="Scrivi qui il tuo articolo...
 
 ## Sezione
 
@@ -106,16 +153,12 @@ Testo normale con **grassetto** e *corsivo*.
 - Lista puntata
 - Altro elemento
 
-![Descrizione immagine](percorso/immagine.jpg)
-
-!!! nota &quot;Titolo Box&quot;
-Contenuto del box evidenza
-!!!"
+![Descrizione immagine](percorso/immagine.jpg)"
                 >{{ article.contenuto_md if article else '' }}</textarea>
             </div>
 
-            <!-- Help Markdown -->
-            <details class="markdown-help">
+            <!-- Help Markdown (visibile solo in modalità plain) -->
+            <details class="markdown-help" id="markdown-help">
                 <summary>Guida rapida Markdown</summary>
                 <div class="help-content">
                     <table>
@@ -126,6 +169,7 @@ Contenuto del box evidenza
                         <tr><td><code>- elemento</code></td><td>Lista puntata</td></tr>
                         <tr><td><code>[testo](url)</code></td><td>Link</td></tr>
                         <tr><td><code>![alt](path)</code></td><td>Immagine</td></tr>
+                        <tr><td><code>!!! nota "Titolo"</code></td><td>Box evidenza</td></tr>
                     </table>
                 </div>
             </details>
@@ -160,4 +204,22 @@ Contenuto del box evidenza
     {% endif %}
 
 </div>
+{% endblock %}
+
+{% block scripts %}
+<!-- EasyMDE Library -->
+<script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+<!-- GEKO Editor -->
+<script src="/static/js/editor.js"></script>
+<script>
+    // Inizializza editor quando la pagina è pronta
+    document.addEventListener('DOMContentLoaded', function() {
+        const editor = GekoEditor.init('contenuto_md');
+
+        // Nascondi help markdown se editor WYSIWYG è attivo
+        if (editor) {
+            document.getElementById('markdown-help').style.display = 'none';
+        }
+    });
+</script>
 {% endblock %}
