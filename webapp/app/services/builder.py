@@ -110,10 +110,17 @@ class MagazineBuilder:
             parts.append('')
 
         # Logo page
-        parts.append('''#pagina-logo(
+        parts.append(f'''#pagina-logo(
+  numero: "{numero}",
+  mese: "{mese}",
+  anno: "{anno}",
   logo-grande: "assets/logo-mqc-grande.png",
-  sottotitolo: "Rivista aperiodica del Mountain QRP Club",
+  sottotitolo: "Il GEKO RADIO MAGAZINE – Rivista aperiodica del Mountain QRP Club.",
 )''')
+        parts.append('')
+
+        # Table of contents
+        parts.append(f'''#sommario(numero: "{numero}", mese: "{mese}", anno: "{anno}")''')
         parts.append('')
 
         # Main content setup
@@ -122,11 +129,6 @@ class MagazineBuilder:
   mese: "{mese}",
   anno: "{anno}",
 )''')
-        parts.append('')
-
-        # Table of contents
-        parts.append('#sommario()')
-        parts.append('')
 
         # Articles
         for article in articles:
