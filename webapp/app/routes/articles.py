@@ -28,6 +28,7 @@ from fastapi import APIRouter, Depends, HTTPException, Form, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from typing import List
 
@@ -46,7 +47,9 @@ async def list_articles(
 ):
     """List all articles."""
     result = await db.execute(
-        select(Article).order_by(Article.created_at.desc())
+        select(Article)
+        .options(selectinload(Article.magazines))
+        .order_by(Article.created_at.desc())
     )
     articles = result.scalars().all()
 
