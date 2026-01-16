@@ -318,6 +318,9 @@ async def build_magazine_pdf(
         )
 
     except Exception as e:
+        import traceback
+        print(f"ERRORE BUILD PDF: {str(e)}")
+        print(traceback.format_exc())
         raise HTTPException(
             status_code=500,
             detail=f"Errore durante la generazione del PDF: {str(e)}"
