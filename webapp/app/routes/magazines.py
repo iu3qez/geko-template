@@ -171,7 +171,8 @@ async def update_magazine(
     Aggiorna i metadati di un numero.
 
     Il numero (progressivo) non può essere modificato dopo la creazione.
-    Solo i numeri in stato "bozza" possono essere modificati.
+    I metadati possono essere modificati anche dopo la pubblicazione
+    (sarà necessario rigenerare il PDF).
     """
     result = await db.execute(
         select(Magazine).where(Magazine.id == magazine_id)
@@ -180,12 +181,6 @@ async def update_magazine(
 
     if not magazine:
         raise HTTPException(status_code=404, detail="Numero non trovato")
-
-    if magazine.stato == MagazineStatus.PUBBLICATO:
-        raise HTTPException(
-            status_code=400,
-            detail="Non puoi modificare un numero già pubblicato"
-        )
 
     magazine.mese = mese
     magazine.anno = anno
@@ -247,7 +242,7 @@ async def build_magazine_pdf(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Genera il PDF finale della rivista.
+    Genera (o rigenera) il PDF finale della rivista.
 
     Questo processo:
     1. Raccoglie tutti gli articoli in ordine
@@ -256,7 +251,7 @@ async def build_magazine_pdf(
     4. Compila in PDF usando il template GEKO
     5. Salva il PDF e aggiorna lo stato a "pubblicato"
 
-    Richiede che tutti gli articoli abbiano un sommario generato.
+    Può essere eseguito più volte per rigenerare il PDF dopo modifiche.
     """
     result = await db.execute(
         select(Magazine)
