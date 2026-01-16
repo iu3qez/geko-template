@@ -269,7 +269,9 @@ async def assign_article_form(
 ):
     """Show form to assign article to magazines."""
     result = await db.execute(
-        select(Article).where(Article.id == article_id)
+        select(Article)
+        .options(selectinload(Article.magazines))
+        .where(Article.id == article_id)
     )
     article = result.scalar_one_or_none()
 
@@ -297,7 +299,9 @@ async def assign_article(
 ):
     """Assign article to selected magazines."""
     result = await db.execute(
-        select(Article).where(Article.id == article_id)
+        select(Article)
+        .options(selectinload(Article.magazines))
+        .where(Article.id == article_id)
     )
     article = result.scalar_one_or_none()
 
