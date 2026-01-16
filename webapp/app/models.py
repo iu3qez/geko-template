@@ -1,11 +1,21 @@
 """Database models for GEKO Magazine Web App."""
 
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum, Table
 from sqlalchemy.orm import relationship, declarative_base
 import enum
 
 Base = declarative_base()
+
+
+# Tabella associazione many-to-many: Articoli <-> Numeri GEKO
+article_magazines = Table(
+    'article_magazines',
+    Base.metadata,
+    Column('article_id', Integer, ForeignKey('articles.id'), primary_key=True),
+    Column('magazine_id', Integer, ForeignKey('magazines.id'), primary_key=True),
+    Column('ordine', Integer, default=0),  # posizione dell'articolo nel numero
+)
 
 
 class MagazineStatus(str, enum.Enum):
@@ -28,7 +38,13 @@ class Magazine(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    articles = relationship("Article", back_populates="magazine", order_by="Article.ordine")
+    # Relazione many-to-many con articoli
+    articles = relationship(
+        "Article",
+        secondary=article_magazines,
+        back_populates="magazines",
+        order_by="Article.ordine"
+    )
     copertina = relationship("Image", foreign_keys=[copertina_id])
 
 
@@ -37,7 +53,6 @@ class Article(Base):
     __tablename__ = "articles"
 
     id = Column(Integer, primary_key=True)
-    magazine_id = Column(Integer, ForeignKey("magazines.id"), nullable=True)
     titolo = Column(String(200), nullable=False)
     sottotitolo = Column(String(300), default="")
     autore = Column(String(50), default="")  # nominativo radio
@@ -45,11 +60,16 @@ class Article(Base):
     contenuto_md = Column(Text, default="")  # markdown originale
     contenuto_typ = Column(Text, default="")  # typst generato
     sommario_llm = Column(Text, default="")  # generato da Claude
-    ordine = Column(Integer, default=0)  # posizione nel magazine
+    ordine = Column(Integer, default=0)  # posizione di default
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    magazine = relationship("Magazine", back_populates="articles")
+    # Relazione many-to-many con numeri GEKO
+    magazines = relationship(
+        "Magazine",
+        secondary=article_magazines,
+        back_populates="articles"
+    )
     images = relationship("Image", back_populates="article")
 
 

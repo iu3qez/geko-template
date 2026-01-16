@@ -29,8 +29,10 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from typing import List
+
 from app.database import get_db
-from app.models import Article
+from app.models import Article, Magazine
 from app.services.converter import MarkdownToTypstConverter
 from app.services.llm import generate_article_summary
 
@@ -253,4 +255,71 @@ async def generate_summary(
     return templates.TemplateResponse(
         "standard/articles/summary_badge.html",
         {"request": request, "article": article, "summary": summary_data}
+    )
+
+
+@router.get("/{article_id}/assign", response_class=HTMLResponse)
+async def assign_article_form(
+    request: Request,
+    article_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """Show form to assign article to magazines."""
+    result = await db.execute(
+        select(Article).where(Article.id == article_id)
+    )
+    article = result.scalar_one_or_none()
+
+    if not article:
+        raise HTTPException(status_code=404, detail="Articolo non trovato")
+
+    # Get all magazines
+    magazines_result = await db.execute(
+        select(Magazine).order_by(Magazine.numero.desc())
+    )
+    magazines = magazines_result.scalars().all()
+
+    templates = request.app.state.templates
+    return templates.TemplateResponse(
+        "standard/articles/assign_form.html",
+        {"request": request, "article": article, "magazines": magazines}
+    )
+
+
+@router.post("/{article_id}/assign", response_class=HTMLResponse)
+async def assign_article(
+    request: Request,
+    article_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """Assign article to selected magazines."""
+    result = await db.execute(
+        select(Article).where(Article.id == article_id)
+    )
+    article = result.scalar_one_or_none()
+
+    if not article:
+        raise HTTPException(status_code=404, detail="Articolo non trovato")
+
+    # Get form data (multiple checkbox values)
+    form_data = await request.form()
+    magazine_ids = form_data.getlist("magazine_ids")
+
+    # Clear existing assignments and add new ones
+    article.magazines.clear()
+
+    if magazine_ids:
+        magazines_result = await db.execute(
+            select(Magazine).where(Magazine.id.in_([int(mid) for mid in magazine_ids]))
+        )
+        magazines = magazines_result.scalars().all()
+        article.magazines.extend(magazines)
+
+    await db.commit()
+
+    # Return updated article card
+    templates = request.app.state.templates
+    return templates.TemplateResponse(
+        "standard/articles/list_item.html",
+        {"request": request, "article": article}
     )

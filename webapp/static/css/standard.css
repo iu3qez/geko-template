@@ -509,3 +509,139 @@
     font-size: 0.875rem;
     overflow-x: auto;
 }
+
+/* =============================================================================
+   BADGES
+   ============================================================================= */
+
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+}
+
+.badge-primary {
+    background: var(--geko-gold);
+    color: white;
+}
+
+.badge-success {
+    background: #22c55e;
+    color: white;
+}
+
+.badge-warning {
+    background: #f59e0b;
+    color: white;
+}
+
+.badge-danger {
+    background: #ef4444;
+    color: white;
+}
+
+.badge-outline {
+    background: transparent;
+    border: 1px solid var(--geko-gray);
+    color: var(--geko-gray);
+}
+
+/* =============================================================================
+   MODAL DIALOG
+   ============================================================================= */
+
+.modal {
+    border: none;
+    border-radius: var(--radius-lg);
+    padding: 0;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: var(--shadow-lg);
+}
+
+.modal::backdrop {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    padding: var(--space-lg);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-md);
+    padding-bottom: var(--space-md);
+    border-bottom: 1px solid var(--geko-light);
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.btn-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--geko-gray);
+    padding: 0;
+    line-height: 1;
+}
+
+.btn-close:hover {
+    color: var(--geko-dark);
+}
+
+/* =============================================================================
+   CHECKBOX LIST (for assign form)
+   ============================================================================= */
+
+.checkbox-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin: var(--space-md) 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.checkbox-item:hover {
+    background: var(--geko-light);
+}
+
+.checkbox-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--geko-gold);
+}
+
+.checkbox-label {
+    flex: 1;
+}
+
+.checkbox-label small {
+    color: var(--geko-gray);
+    margin-left: var(--space-xs);
+}
+
+.form-help {
+    color: var(--geko-gray);
+    font-size: 0.9rem;
+    margin-bottom: var(--space-md);
+}

@@ -28,6 +28,19 @@
                 {{ article.created_at.strftime('%d/%m/%Y') }}
             </span>
 
+            <!-- Badge numeri GEKO assegnati -->
+            {% if article.magazines %}
+                {% for mag in article.magazines %}
+                <span class="badge badge-primary" title="Pubblicato in GEKO {{ mag.numero }}">
+                    GEKO {{ mag.numero }}
+                </span>
+                {% endfor %}
+            {% else %}
+            <span class="badge badge-outline" title="Articolo non ancora assegnato a un numero">
+                ⚠️ Da assegnare
+            </span>
+            {% endif %}
+
             <!-- Badge sommario AI -->
             {% if article.sommario_llm %}
             <span class="badge badge-success" title="{{ article.sommario_llm }}">
@@ -42,6 +55,18 @@
     </div>
 
     <div class="article-actions">
+        <!-- Assegna a numero GEKO -->
+        <button
+            class="btn btn-small btn-outline"
+            hx-get="/articles/{{ article.id }}/assign"
+            hx-target="#assign-modal-content"
+            hx-swap="innerHTML"
+            onclick="document.getElementById('assign-modal').showModal()"
+            title="Assegna a numero GEKO"
+        >
+            📎 Assegna
+        </button>
+
         <!-- Genera sommario AI -->
         {% if not article.sommario_llm %}
         <button

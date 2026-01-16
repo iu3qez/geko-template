@@ -36,5 +36,19 @@
         {% endif %}
     </div>
 
+    <!-- Modale assegnazione articolo a numeri GEKO -->
+    <dialog id="assign-modal" class="modal">
+        <div class="modal-content">
+            <header class="modal-header">
+                <h2>Assegna a numero GEKO</h2>
+                <button type="button" class="btn-close" onclick="this.closest('dialog').close()">✕</button>
+            </header>
+            <div id="assign-modal-content">
+                <!-- Contenuto caricato via HTMX -->
+                <p>Caricamento...</p>
+            </div>
+        </div>
+    </dialog>
+
 </div>
 {% endblock %}
