@@ -30,7 +30,7 @@ services:
     # ===========================================
     # IMPORTANTE: Modifica con il tuo username!
     # ===========================================
-    image: ghcr.io/TUO-USERNAME/geko-template/geko-webapp:latest
+    image: ghcr.io/iu3qez/geko-template/geko-webapp:latest
 
     container_name: geko-webapp
     restart: unless-stopped
