@@ -14,21 +14,22 @@ engine = create_async_engine(DATABASE_URL, echo=False)
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
-async def run_migrations(conn):
-    """Run schema migrations for existing databases."""
+def run_migrations(conn):
+    """Run schema migrations for existing databases (sync, called via run_sync)."""
     # Get existing columns in images table
-    result = conn.execute(text("PRAGMA table_info(images)"))
-    existing_columns = {row[1] for row in result.fetchall()}
+    try:
+        result = conn.execute(text("PRAGMA table_info(images)"))
+        existing_columns = {row[1] for row in result.fetchall()}
+    except Exception:
+        return  # Table doesn't exist yet
 
     # Add alt_text column if missing
-    if "alt_text" in existing_columns:
-        pass  # Column exists
-    else:
+    if "alt_text" not in existing_columns:
         try:
             conn.execute(text("ALTER TABLE images ADD COLUMN alt_text TEXT DEFAULT ''"))
             print("Migration: added alt_text column to images")
-        except Exception:
-            pass  # Table might not exist yet
+        except Exception as e:
+            print(f"Migration warning: {e}")
 
 
 async def init_db():
