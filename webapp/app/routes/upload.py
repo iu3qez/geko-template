@@ -31,6 +31,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, R
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from PIL import Image as PILImage  # Alias per evitare conflitto con app.models.Image
 
 from datetime import datetime, timedelta
@@ -467,7 +468,15 @@ async def image_library(
     Returns:
         HTML partial con griglia immagini
     """
-    query = select(ImageModel).order_by(ImageModel.uploaded_at.desc())
+    # Eager load article and article.magazines for is_published property
+    query = (
+        select(ImageModel)
+        .options(
+            selectinload(ImageModel.article)
+            .selectinload(Article.magazines)
+        )
+        .order_by(ImageModel.uploaded_at.desc())
+    )
 
     if filter == "today":
         today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -514,7 +523,15 @@ async def image_library_grid(
     """
     Solo la griglia immagini (per aggiornamento HTMX).
     """
-    query = select(ImageModel).order_by(ImageModel.uploaded_at.desc())
+    # Eager load for is_published property
+    query = (
+        select(ImageModel)
+        .options(
+            selectinload(ImageModel.article)
+            .selectinload(Article.magazines)
+        )
+        .order_by(ImageModel.uploaded_at.desc())
+    )
 
     if filter == "today":
         today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
