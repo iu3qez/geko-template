@@ -1,0 +1,122 @@
+{% extends "standard/base.html" %}
+<!--
+    Pannello Configurazione - Impostazioni globali GEKO Magazine
+
+    Permette di modificare:
+    - Ultimo numero pubblicato
+    - Titolo e sottotitolo rivista
+    - Contatti (sito, email)
+    - (futuro) Template Typst
+-->
+
+{% block title %}Configurazione - GEKO Magazine{% endblock %}
+
+{% block main %}
+<div class="config-container">
+
+    <header class="page-header">
+        <h1>Configurazione</h1>
+        <p class="page-subtitle">Impostazioni globali della rivista</p>
+    </header>
+
+    {% if message %}
+    <div class="alert alert-success">
+        {{ message }}
+    </div>
+    {% endif %}
+
+    <form
+        method="post"
+        action="/config/"
+        class="config-form"
+    >
+        <!-- Informazioni Rivista -->
+        <fieldset class="form-section">
+            <legend>Informazioni Rivista</legend>
+
+            <div class="form-group">
+                <label for="ultimo_numero">Ultimo numero pubblicato</label>
+                <input
+                    type="text"
+                    id="ultimo_numero"
+                    name="ultimo_numero"
+                    value="{{ configs.ultimo_numero.value }}"
+                    placeholder="Es: 67"
+                    class="input-small"
+                >
+                <span class="form-hint">{{ configs.ultimo_numero.description }}</span>
+            </div>
+
+            <div class="form-group">
+                <label for="titolo_rivista">Titolo rivista</label>
+                <input
+                    type="text"
+                    id="titolo_rivista"
+                    name="titolo_rivista"
+                    value="{{ configs.titolo_rivista.value }}"
+                    placeholder="GEKO Radio Magazine"
+                >
+                <span class="form-hint">{{ configs.titolo_rivista.description }}</span>
+            </div>
+
+            <div class="form-group">
+                <label for="sottotitolo_rivista">Sottotitolo</label>
+                <input
+                    type="text"
+                    id="sottotitolo_rivista"
+                    name="sottotitolo_rivista"
+                    value="{{ configs.sottotitolo_rivista.value }}"
+                    placeholder="Rivista aperiodica del Mountain QRP Club"
+                >
+                <span class="form-hint">{{ configs.sottotitolo_rivista.description }}</span>
+            </div>
+        </fieldset>
+
+        <!-- Contatti -->
+        <fieldset class="form-section">
+            <legend>Contatti</legend>
+
+            <div class="form-group">
+                <label for="sito_web">Sito web</label>
+                <input
+                    type="url"
+                    id="sito_web"
+                    name="sito_web"
+                    value="{{ configs.sito_web.value }}"
+                    placeholder="https://www.mqc.it"
+                >
+                <span class="form-hint">{{ configs.sito_web.description }}</span>
+            </div>
+
+            <div class="form-group">
+                <label for="email_redazione">Email redazione</label>
+                <input
+                    type="email"
+                    id="email_redazione"
+                    name="email_redazione"
+                    value="{{ configs.email_redazione.value }}"
+                    placeholder="redazione@mqc.it"
+                >
+                <span class="form-hint">{{ configs.email_redazione.description }}</span>
+            </div>
+        </fieldset>
+
+        <!-- Template (futuro) -->
+        <fieldset class="form-section form-section-disabled">
+            <legend>Template Typst (prossimamente)</legend>
+            <p class="text-muted">
+                In futuro sarà possibile personalizzare il template Typst direttamente da qui.
+            </p>
+        </fieldset>
+
+        <!-- Azioni -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-large">
+                Salva configurazione
+            </button>
+        </div>
+
+    </form>
+
+</div>
+{% endblock %}

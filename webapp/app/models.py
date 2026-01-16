@@ -101,3 +101,87 @@ class Image(Base):
             mag.stato == MagazineStatus.PUBBLICATO
             for mag in self.article.magazines
         )
+
+
+class Config(Base):
+    """
+    Configurazione globale dell'applicazione.
+
+    Memorizza parametri chiave-valore per configurazioni
+    che valgono per tutti i numeri della rivista.
+
+    Parametri predefiniti:
+    - ultimo_numero: numero dell'ultimo GEKO pubblicato (es. "67")
+    - titolo_rivista: nome della rivista
+    - sottotitolo_rivista: descrizione/sottotitolo
+    - sito_web: URL del sito
+    - template_typst: template Typst personalizzato (futuro)
+    """
+    __tablename__ = "config"
+
+    key = Column(String(100), primary_key=True)
+    value = Column(Text, default="")
+    description = Column(String(500), default="")  # descrizione per UI
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Valori di default per le configurazioni
+    DEFAULTS = {
+        "ultimo_numero": ("67", "Numero dell'ultimo GEKO pubblicato"),
+        "titolo_rivista": ("GEKO Radio Magazine", "Titolo della rivista"),
+        "sottotitolo_rivista": ("Rivista aperiodica del Mountain QRP Club", "Sottotitolo/descrizione"),
+        "sito_web": ("https://www.mqc.it", "Sito web del club"),
+        "email_redazione": ("redazione@mqc.it", "Email della redazione"),
+    }
+
+    @classmethod
+    async def get(cls, db, key: str, default: str = "") -> str:
+        """Ottiene un valore di configurazione."""
+        from sqlalchemy import select
+        result = await db.execute(select(cls).where(cls.key == key))
+        config = result.scalar_one_or_none()
+        if config:
+            return config.value
+        # Ritorna default dal DEFAULTS o quello passato
+        if key in cls.DEFAULTS:
+            return cls.DEFAULTS[key][0]
+        return default
+
+    @classmethod
+    async def set(cls, db, key: str, value: str, description: str = None):
+        """Imposta un valore di configurazione."""
+        from sqlalchemy import select
+        result = await db.execute(select(cls).where(cls.key == key))
+        config = result.scalar_one_or_none()
+        if config:
+            config.value = value
+            if description:
+                config.description = description
+        else:
+            desc = description or (cls.DEFAULTS.get(key, ("", ""))[1])
+            config = cls(key=key, value=value, description=desc)
+            db.add(config)
+        await db.commit()
+
+    @classmethod
+    async def get_all(cls, db) -> dict:
+        """Ottiene tutte le configurazioni come dizionario."""
+        from sqlalchemy import select
+        result = await db.execute(select(cls))
+        configs = {c.key: c for c in result.scalars().all()}
+
+        # Unisci con i default (per mostrare anche quelli non ancora salvati)
+        all_configs = {}
+        for key, (default_value, desc) in cls.DEFAULTS.items():
+            if key in configs:
+                all_configs[key] = {
+                    "value": configs[key].value,
+                    "description": configs[key].description or desc,
+                    "updated_at": configs[key].updated_at
+                }
+            else:
+                all_configs[key] = {
+                    "value": default_value,
+                    "description": desc,
+                    "updated_at": None
+                }
+        return all_configs

@@ -42,7 +42,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 
 from app.database import init_db
-from app.routes import articles, magazines, upload
+from app.routes import articles, magazines, upload, config
 
 # Directory paths
 APP_DIR = Path(__file__).parent
@@ -112,6 +112,7 @@ app.state.templates = templates
 app.include_router(articles.router)
 app.include_router(magazines.router)
 app.include_router(upload.router)
+app.include_router(config.router)
 
 
 # =============================================================================

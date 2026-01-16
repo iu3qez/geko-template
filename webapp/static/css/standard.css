@@ -847,3 +847,58 @@
         max-height: 400px;
     }
 }
+
+/* =============================================================================
+   PANNELLO CONFIGURAZIONE
+   ============================================================================= */
+
+.config-container {
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.page-subtitle {
+    color: var(--geko-gray);
+    margin-top: var(--space-xs);
+}
+
+.config-form .form-section {
+    background: white;
+    padding: var(--space-lg);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-lg);
+    box-shadow: var(--shadow-sm);
+}
+
+.config-form .form-section legend {
+    font-weight: 600;
+    color: var(--geko-dark);
+    padding: 0 var(--space-sm);
+}
+
+.form-hint {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--geko-gray);
+    margin-top: var(--space-xs);
+}
+
+.input-small {
+    max-width: 150px;
+}
+
+.form-section-disabled {
+    opacity: 0.6;
+}
+
+.alert {
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-lg);
+}
+
+.alert-success {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #86efac;
+}
