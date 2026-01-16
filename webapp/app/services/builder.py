@@ -6,8 +6,9 @@ import typst
 
 # Paths
 WEBAPP_DIR = Path(__file__).parent.parent.parent
+PROJECT_ROOT = WEBAPP_DIR.parent  # geko-template/
 TYPST_DIR = WEBAPP_DIR / "typst"
-TEMPLATE_DIR = TYPST_DIR  # template.typ is in typst/ directory
+TEMPLATE_DIR = PROJECT_ROOT  # template.typ is in project root
 OUTPUT_DIR = WEBAPP_DIR / "data" / "output"
 
 
