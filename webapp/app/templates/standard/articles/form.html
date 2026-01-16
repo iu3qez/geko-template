@@ -123,28 +123,34 @@
             </div>
         </fieldset>
 
-        <!-- CONTENUTO -->
+        <!-- CONTENUTO + LIBRERIA IMMAGINI -->
         <fieldset class="form-section">
             <legend>Contenuto (Markdown)</legend>
 
-            <!-- Toggle modalità editor -->
-            <div class="editor-mode-toggle">
-                <button type="button" class="btn btn-small btn-outline" onclick="GekoEditor.toggle()">
-                    🔄 Cambia Editor
-                </button>
-            </div>
+            <div class="editor-with-library">
+                <!-- COLONNA SINISTRA: Editor -->
+                <div class="editor-column">
+                    <!-- Toggle modalità editor -->
+                    <div class="editor-mode-toggle">
+                        <button type="button" class="btn btn-small btn-outline" onclick="GekoEditor.toggle()">
+                            🔄 Cambia Editor
+                        </button>
+                        <button type="button" class="btn btn-small btn-outline" onclick="toggleLibrary()">
+                            📷 Libreria Immagini
+                        </button>
+                    </div>
 
-            <div class="form-group">
-                <label for="contenuto_md">
-                    Scrivi il contenuto
-                    <span class="text-muted">(con toolbar e preview)</span>
-                </label>
-                <textarea
-                    id="contenuto_md"
-                    name="contenuto_md"
-                    rows="20"
-                    data-editor="wysiwyg"
-                    placeholder="Scrivi qui il tuo articolo...
+                    <div class="form-group">
+                        <label for="contenuto_md">
+                            Scrivi il contenuto
+                            <span class="text-muted">(con toolbar e preview)</span>
+                        </label>
+                        <textarea
+                            id="contenuto_md"
+                            name="contenuto_md"
+                            rows="20"
+                            data-editor="wysiwyg"
+                            placeholder="Scrivi qui il tuo articolo...
 
 ## Sezione
 
@@ -154,7 +160,25 @@ Testo normale con **grassetto** e *corsivo*.
 - Altro elemento
 
 ![Descrizione immagine](percorso/immagine.jpg)"
-                >{{ article.contenuto_md if article else '' }}</textarea>
+                        >{{ article.contenuto_md if article else '' }}</textarea>
+                    </div>
+                </div>
+
+                <!-- COLONNA DESTRA: Libreria Immagini -->
+                <div class="library-column" id="library-panel" style="display: none;">
+                    <div class="library-panel-header">
+                        <h3>Libreria Immagini</h3>
+                        <button type="button" class="btn-close" onclick="toggleLibrary()">✕</button>
+                    </div>
+                    <div
+                        id="library-content"
+                        hx-get="/upload/library"
+                        hx-trigger="load"
+                        hx-swap="innerHTML"
+                    >
+                        <p>Caricamento...</p>
+                    </div>
+                </div>
             </div>
 
             <!-- Help Markdown (visibile solo in modalità plain) -->
@@ -221,5 +245,47 @@ Testo normale con **grassetto** e *corsivo*.
             document.getElementById('markdown-help').style.display = 'none';
         }
     });
+
+    // Toggle pannello libreria immagini
+    function toggleLibrary() {
+        const panel = document.getElementById('library-panel');
+        const isVisible = panel.style.display !== 'none';
+        panel.style.display = isVisible ? 'none' : 'block';
+
+        // Trigger HTMX load se non ancora caricato
+        if (!isVisible) {
+            htmx.trigger('#library-content', 'load');
+        }
+    }
+
+    // Inserisce immagine dalla libreria nell'editor
+    function insertImageFromLibrary(element) {
+        const url = element.dataset.url;
+        const alt = element.dataset.alt || 'Immagine';
+
+        const markdown = `![${alt}](${url})`;
+
+        // Inserisci nel editor (WYSIWYG o plain)
+        const editor = GekoEditor.getInstance();
+        if (editor) {
+            // EasyMDE: inserisci alla posizione del cursore
+            const cm = editor.codemirror;
+            cm.replaceSelection(markdown);
+            cm.focus();
+        } else {
+            // Plain textarea: inserisci alla fine o alla posizione del cursore
+            const textarea = document.getElementById('contenuto_md');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = textarea.value;
+            textarea.value = text.substring(0, start) + markdown + text.substring(end);
+            textarea.focus();
+            textarea.selectionStart = textarea.selectionEnd = start + markdown.length;
+        }
+
+        // Feedback visivo
+        element.classList.add('inserted');
+        setTimeout(() => element.classList.remove('inserted'), 500);
+    }
 </script>
 {% endblock %}

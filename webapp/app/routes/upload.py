@@ -33,8 +33,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from PIL import Image as PILImage  # Alias per evitare conflitto con app.models.Image
 
+from datetime import datetime, timedelta
+
 from app.database import get_db
-from app.models import Image as ImageModel, Article
+from app.models import Image as ImageModel, Article, Magazine, MagazineStatus
 from app.services.converter import MarkdownToTypstConverter
 
 router = APIRouter(prefix="/upload", tags=["upload"])
@@ -444,3 +446,93 @@ async def delete_image(
     await db.commit()
 
     return {"status": "deleted"}
+
+
+@router.get("/library", response_class=HTMLResponse)
+async def image_library(
+    request: Request,
+    filter: str = "all",  # all, today, published, magazine_id
+    magazine_id: int = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Libreria immagini con filtri.
+
+    Filtri disponibili:
+    - all: tutte le immagini
+    - today: caricate oggi
+    - published: in articoli pubblicati
+    - magazine: in articoli di un numero specifico (richiede magazine_id)
+
+    Returns:
+        HTML partial con griglia immagini
+    """
+    query = select(ImageModel).order_by(ImageModel.uploaded_at.desc())
+
+    if filter == "today":
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        query = query.where(ImageModel.uploaded_at >= today_start)
+
+    result = await db.execute(query)
+    images = result.scalars().all()
+
+    # Filtri post-query (per relazioni complesse)
+    if filter == "published":
+        images = [img for img in images if img.is_published]
+    elif filter == "magazine" and magazine_id:
+        images = [
+            img for img in images
+            if img.article and any(mag.id == magazine_id for mag in img.article.magazines)
+        ]
+
+    # Get all magazines for filter dropdown
+    magazines_result = await db.execute(
+        select(Magazine).order_by(Magazine.numero.desc())
+    )
+    magazines = magazines_result.scalars().all()
+
+    templates = request.app.state.templates
+    return templates.TemplateResponse(
+        "standard/upload/library.html",
+        {
+            "request": request,
+            "images": images,
+            "magazines": magazines,
+            "current_filter": filter,
+            "current_magazine_id": magazine_id
+        }
+    )
+
+
+@router.get("/library/grid", response_class=HTMLResponse)
+async def image_library_grid(
+    request: Request,
+    filter: str = "all",
+    magazine_id: int = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Solo la griglia immagini (per aggiornamento HTMX).
+    """
+    query = select(ImageModel).order_by(ImageModel.uploaded_at.desc())
+
+    if filter == "today":
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        query = query.where(ImageModel.uploaded_at >= today_start)
+
+    result = await db.execute(query)
+    images = result.scalars().all()
+
+    if filter == "published":
+        images = [img for img in images if img.is_published]
+    elif filter == "magazine" and magazine_id:
+        images = [
+            img for img in images
+            if img.article and any(mag.id == magazine_id for mag in img.article.magazines)
+        ]
+
+    templates = request.app.state.templates
+    return templates.TemplateResponse(
+        "standard/upload/library_grid.html",
+        {"request": request, "images": images}
+    )

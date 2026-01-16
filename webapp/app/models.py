@@ -81,7 +81,23 @@ class Image(Base):
     filename = Column(String(255), nullable=False)
     original_filename = Column(String(255), nullable=False)
     path = Column(String(500), nullable=False)
+    alt_text = Column(String(300), default="")  # testo alternativo/descrizione
     article_id = Column(Integer, ForeignKey("articles.id"), nullable=True)
     uploaded_at = Column(DateTime, default=datetime.utcnow)
 
     article = relationship("Article", back_populates="images")
+
+    @property
+    def url(self):
+        """URL pubblico dell'immagine."""
+        return f"/images/{self.filename}"
+
+    @property
+    def is_published(self):
+        """True se l'immagine è in un articolo pubblicato."""
+        if not self.article:
+            return False
+        return any(
+            mag.stato == MagazineStatus.PUBBLICATO
+            for mag in self.article.magazines
+        )

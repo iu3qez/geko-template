@@ -1,0 +1,29 @@
+<!--
+    Griglia immagini per la libreria.
+    Partial caricato via HTMX quando cambiano i filtri.
+-->
+
+{% if images %}
+    {% for image in images %}
+    <div
+        class="library-item"
+        data-url="{{ image.url }}"
+        data-alt="{{ image.alt_text or image.original_filename }}"
+        onclick="insertImageFromLibrary(this)"
+        title="{{ image.original_filename }}&#10;{{ image.uploaded_at.strftime('%d/%m/%Y %H:%M') }}"
+    >
+        <img src="{{ image.url }}" alt="{{ image.alt_text or image.original_filename }}" loading="lazy">
+        <div class="library-item-info">
+            <span class="library-item-name">{{ image.original_filename[:20] }}{% if image.original_filename|length > 20 %}...{% endif %}</span>
+            {% if image.is_published %}
+            <span class="badge badge-success badge-small">Pubbl.</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="library-empty">
+        <p>Nessuna immagine trovata</p>
+        <p class="text-muted">Carica la prima immagine usando il form sopra</p>
+    </div>
+{% endif %}

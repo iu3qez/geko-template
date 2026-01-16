@@ -1,0 +1,93 @@
+<!--
+    Libreria Immagini - Modale per selezione immagini nell'editor.
+
+    Include:
+    - Filtri (tutte, oggi, pubblicate, per numero)
+    - Griglia immagini con preview
+    - Click per inserire nel testo
+    - Area upload per nuove immagini
+-->
+
+<div class="library-container">
+    <!-- Filtri -->
+    <div class="library-filters">
+        <button
+            class="filter-btn {% if current_filter == 'all' %}active{% endif %}"
+            hx-get="/upload/library/grid?filter=all"
+            hx-target="#library-grid"
+            hx-swap="innerHTML"
+        >
+            Tutte
+        </button>
+        <button
+            class="filter-btn {% if current_filter == 'today' %}active{% endif %}"
+            hx-get="/upload/library/grid?filter=today"
+            hx-target="#library-grid"
+            hx-swap="innerHTML"
+        >
+            Oggi
+        </button>
+        <button
+            class="filter-btn {% if current_filter == 'published' %}active{% endif %}"
+            hx-get="/upload/library/grid?filter=published"
+            hx-target="#library-grid"
+            hx-swap="innerHTML"
+        >
+            Pubblicate
+        </button>
+
+        {% if magazines %}
+        <select
+            class="filter-select"
+            hx-get="/upload/library/grid"
+            hx-target="#library-grid"
+            hx-swap="innerHTML"
+            hx-trigger="change"
+            name="magazine_id"
+            hx-include="this"
+            hx-vals='{"filter": "magazine"}'
+        >
+            <option value="">Per numero...</option>
+            {% for mag in magazines %}
+            <option value="{{ mag.id }}" {% if current_magazine_id == mag.id %}selected{% endif %}>
+                GEKO {{ mag.numero }}
+            </option>
+            {% endfor %}
+        </select>
+        {% endif %}
+    </div>
+
+    <!-- Area upload -->
+    <div class="library-upload">
+        <form
+            id="library-upload-form"
+            hx-post="/upload/image/editor"
+            hx-target="#library-grid"
+            hx-swap="afterbegin"
+            hx-encoding="multipart/form-data"
+            hx-on::after-request="this.reset()"
+        >
+            <label class="upload-dropzone" for="library-file-input">
+                <span class="upload-icon">📷</span>
+                <span class="upload-text">Trascina qui o clicca per caricare</span>
+                <input
+                    type="file"
+                    id="library-file-input"
+                    name="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    hidden
+                    onchange="this.form.requestSubmit()"
+                >
+            </label>
+        </form>
+    </div>
+
+    <!-- Griglia immagini -->
+    <div id="library-grid" class="library-grid">
+        {% include "standard/upload/library_grid.html" %}
+    </div>
+
+    <p class="library-help">
+        Clicca su un'immagine per inserirla nell'editor
+    </p>
+</div>
