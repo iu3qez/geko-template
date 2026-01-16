@@ -49,9 +49,9 @@ services:
       # Database e file caricati (PERSISTENTE)
       - ./data:/app/data
 
-      # Template Typst (copia locale o monta da altra posizione)
-      - ./typst/template.typ:/app/typst/template.typ:ro
-      - ./assets:/app/typst/assets:ro
+      # Template Typst (dalla directory parent)
+      - ../template.typ:/app/typst/template.typ:ro
+      - ../assets:/app/typst/assets:ro
 
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health').raise_for_status()"]
