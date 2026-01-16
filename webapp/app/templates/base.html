@@ -23,6 +23,14 @@
 
     <title>{% block title %}GEKO Magazine{% endblock %}</title>
 
+    <!-- Fonts: IBM Plex Mono (display) + Source Serif Pro (body) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
     <!-- HTMX - Interattività dichiarativa -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 
@@ -40,5 +48,15 @@
 
     {% block scripts %}{% endblock %}
 
+    <!-- Initialize Lucide icons -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+        });
+        // Re-init after HTMX swaps
+        document.body.addEventListener('htmx:afterSwap', () => {
+            lucide.createIcons();
+        });
+    </script>
 </body>
 </html>
