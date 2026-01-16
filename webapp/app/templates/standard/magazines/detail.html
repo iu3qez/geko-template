@@ -24,17 +24,16 @@
         </div>
 
         <div class="header-actions">
-            {% if magazine.stato.value == 'bozza' %}
             <button
                 class="btn btn-primary btn-large"
                 hx-post="/magazines/{{ magazine.id }}/build"
                 hx-target="#build-result"
                 hx-indicator="#build-loading"
             >
-                🔨 Genera PDF
+                {% if magazine.stato.value == 'bozza' %}🔨 Genera PDF{% else %}🔄 Rigenera PDF{% endif %}
             </button>
             <span id="build-loading" class="htmx-indicator">Generando PDF...</span>
-            {% else %}
+            {% if magazine.stato.value == 'pubblicato' %}
             <a href="/magazines/{{ magazine.id }}/pdf" class="btn btn-success btn-large">
                 📥 Scarica PDF
             </a>
@@ -61,9 +60,7 @@
     <section class="magazine-articles">
         <header class="section-header">
             <h2>Articoli ({{ magazine.articles|length }})</h2>
-            {% if magazine.stato.value == 'bozza' %}
             <a href="/articles/" class="btn btn-small btn-outline">+ Aggiungi articolo</a>
-            {% endif %}
         </header>
 
         {% if magazine.articles %}
