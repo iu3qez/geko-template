@@ -173,7 +173,7 @@ Testo normale con **grassetto** e *corsivo*.
                     <div
                         id="library-content"
                         hx-get="/upload/library"
-                        hx-trigger="load"
+                        hx-trigger="revealed"
                         hx-swap="innerHTML"
                     >
                         <p>Caricamento...</p>
@@ -249,12 +249,13 @@ Testo normale con **grassetto** e *corsivo*.
     // Toggle pannello libreria immagini
     function toggleLibrary() {
         const panel = document.getElementById('library-panel');
+        const content = document.getElementById('library-content');
         const isVisible = panel.style.display !== 'none';
         panel.style.display = isVisible ? 'none' : 'block';
 
-        // Trigger HTMX load se non ancora caricato
-        if (!isVisible) {
-            htmx.trigger('#library-content', 'load');
+        // Carica contenuto se non ancora caricato (prima apertura)
+        if (!isVisible && content.innerHTML.trim() === '<p>Caricamento...</p>') {
+            htmx.ajax('GET', '/upload/library', {target: '#library-content', swap: 'innerHTML'});
         }
     }
 
