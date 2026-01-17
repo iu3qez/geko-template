@@ -68,6 +68,40 @@
         </fieldset>
 
         <fieldset class="form-section">
+            <legend>Immagine Copertina</legend>
+
+            <div class="form-group">
+                <label>Seleziona immagine di copertina</label>
+                <small>Se non selezionata, verrà usata l'immagine di default</small>
+
+                <input type="hidden" id="copertina_id" name="copertina_id" value="">
+
+                <div class="cover-selection">
+                    <div class="cover-preview" id="cover-preview">
+                        <img src="/static/images/default-cover.jpg" alt="Copertina default" onerror="this.src='/upload/image/1'">
+                        <span class="cover-label">Default</span>
+                    </div>
+                    <button type="button" class="btn btn-secondary" onclick="openCoverLibrary()">
+                        Scegli dalla libreria
+                    </button>
+                </div>
+
+                <!-- Modal libreria immagini -->
+                <div id="cover-library-modal" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>Seleziona immagine di copertina</h3>
+                            <button type="button" class="modal-close" onclick="closeCoverLibrary()">&times;</button>
+                        </div>
+                        <div class="modal-body" id="cover-library-content">
+                            Caricamento...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+
+        <fieldset class="form-section">
             <legend>Editoriale (opzionale)</legend>
 
             <div class="form-group">
@@ -103,4 +137,140 @@
     </form>
 
 </div>
+
+<script>
+function openCoverLibrary() {
+    const modal = document.getElementById('cover-library-modal');
+    const content = document.getElementById('cover-library-content');
+    modal.style.display = 'flex';
+
+    // Carica immagini dalla libreria
+    fetch('/upload/library?mode=select')
+        .then(r => r.text())
+        .then(html => {
+            content.innerHTML = html;
+            // Aggiungi event listener alle immagini
+            content.querySelectorAll('.library-image').forEach(img => {
+                img.style.cursor = 'pointer';
+                img.onclick = () => selectCoverImage(img.dataset.id, img.src, img.dataset.caption);
+            });
+        });
+}
+
+function closeCoverLibrary() {
+    document.getElementById('cover-library-modal').style.display = 'none';
+}
+
+function selectCoverImage(id, src, caption) {
+    document.getElementById('copertina_id').value = id;
+    const preview = document.getElementById('cover-preview');
+    preview.innerHTML = `
+        <img src="${src}" alt="Copertina selezionata">
+        <span class="cover-label">${caption || 'Immagine ' + id}</span>
+        <button type="button" class="btn-remove" onclick="clearCoverImage(event)">&times;</button>
+    `;
+    closeCoverLibrary();
+}
+
+function clearCoverImage(e) {
+    e.preventDefault();
+    document.getElementById('copertina_id').value = '';
+    document.getElementById('cover-preview').innerHTML = `
+        <img src="/static/images/default-cover.jpg" alt="Copertina default">
+        <span class="cover-label">Default</span>
+    `;
+}
+
+// Chiudi modal con click fuori
+document.getElementById('cover-library-modal').onclick = function(e) {
+    if (e.target === this) closeCoverLibrary();
+};
+</script>
+
+<style>
+.cover-selection {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+.cover-preview {
+    position: relative;
+    width: 150px;
+    height: 100px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.cover-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.cover-label {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    font-size: 0.75rem;
+    padding: 2px 4px;
+    text-align: center;
+}
+.btn-remove {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: red;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+}
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.modal-content {
+    background: white;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid #ddd;
+}
+.modal-header h3 { margin: 0; }
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+.modal-body {
+    padding: 1rem;
+    overflow-y: auto;
+}
+</style>
 {% endblock %}

@@ -89,6 +89,7 @@ async def create_magazine(
     anno: str = Form(...),
     editoriale: str = Form(""),
     editoriale_autore: str = Form(""),
+    copertina_id: str = Form(""),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -103,6 +104,7 @@ async def create_magazine(
         anno: Anno di pubblicazione (es. "2025")
         editoriale: Testo dell'editoriale (opzionale)
         editoriale_autore: Autore dell'editoriale (opzionale)
+        copertina_id: ID immagine di copertina (opzionale)
     """
     magazine = Magazine(
         numero=numero,
@@ -110,6 +112,7 @@ async def create_magazine(
         anno=anno,
         editoriale=editoriale,
         editoriale_autore=editoriale_autore,
+        copertina_id=int(copertina_id) if copertina_id else None,
         stato=MagazineStatus.BOZZA,
     )
 
@@ -165,6 +168,7 @@ async def update_magazine(
     anno: str = Form(...),
     editoriale: str = Form(""),
     editoriale_autore: str = Form(""),
+    copertina_id: str = Form(""),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -186,6 +190,7 @@ async def update_magazine(
     magazine.anno = anno
     magazine.editoriale = editoriale
     magazine.editoriale_autore = editoriale_autore
+    magazine.copertina_id = int(copertina_id) if copertina_id else None
 
     await db.commit()
 
@@ -255,7 +260,7 @@ async def build_magazine_pdf(
     """
     result = await db.execute(
         select(Magazine)
-        .options(selectinload(Magazine.articles))
+        .options(selectinload(Magazine.articles), selectinload(Magazine.copertina))
         .where(Magazine.id == magazine_id)
     )
     magazine = result.scalar_one_or_none()
@@ -285,6 +290,12 @@ async def build_magazine_pdf(
         if article.sommario_llm or article.sottotitolo
     ]
 
+    # Determina immagine copertina (selezionata o default)
+    if magazine.copertina:
+        copertina_path = f"../data/images/{magazine.copertina.filename}"
+    else:
+        copertina_path = "assets/copertina.jpg"  # Default
+
     # Genera PDF
     try:
         builder = MagazineBuilder()
@@ -295,6 +306,7 @@ async def build_magazine_pdf(
             articles_typst=articles_typst,
             editoriale=magazine.editoriale,
             editoriale_autore=magazine.editoriale_autore,
+            copertina_path=copertina_path,
             evidenze=evidenze if evidenze else None,
         )
 
