@@ -149,11 +149,22 @@ function initEditor(textareaId = 'contenuto_md') {
         editorInstance = null;
     }
 
-    // Crea editor EasyMDE
+    // Determina uniqueId per autosave basato sull'articolo
+    const articleId = textarea.dataset.articleId || 'new';
+    const autosaveConfig = articleId === 'new'
+        ? { enabled: false }  // Disabilita autosave per nuovi articoli
+        : {
+            enabled: true,
+            uniqueId: `geko-article-editor-${articleId}`,
+            delay: 5000
+          };
+
+    // Crea editor EasyMDE con autosave dinamico
     try {
         editorInstance = new EasyMDE({
             element: textarea,
-            ...EDITOR_CONFIG.easymde
+            ...EDITOR_CONFIG.easymde,
+            autosave: autosaveConfig
         });
 
         console.log('Editor WYSIWYG inizializzato');
