@@ -1,0 +1,48 @@
+---
+session: geko-editor-fix
+date: 2026-01-19
+status: complete
+outcome: SUCCEEDED
+---
+
+goal: Fix bug where "New Article" form showed previous article content
+now: Verify fix works in browser, clear old localStorage if needed
+test: "Open webapp, edit article, then click 'New Article' - form should be empty"
+
+done_this_session:
+  - task: Diagnosed EasyMDE autosave bug - fixed uniqueId causing content restoration
+    files: [webapp/static/js/editor.js:27-30]
+  - task: Added data-article-id attribute to textarea for dynamic autosave
+    files: [webapp/app/templates/standard/articles/form.html:153]
+  - task: Modified editor.js to use per-article autosave ID, disabled for new articles
+    files: [webapp/static/js/editor.js:152-167]
+  - task: Committed fix
+    files: []
+
+blockers: []
+
+questions: []
+
+decisions:
+  - disable_autosave_for_new: "New articles don't need autosave - prevents stale content"
+  - per_article_id: "Use geko-article-editor-{id} pattern for isolation"
+
+findings:
+  - root_cause: "EasyMDE autosave used fixed uniqueId 'geko-article-editor' for all articles"
+  - localStorage_key: "EasyMDE stores in smde_{uniqueId} format"
+
+worked:
+  - "Data attribute on textarea to pass article ID to JS"
+  - "Spread operator with override for autosave config"
+
+failed: []
+
+next:
+  - "User should clear localStorage.removeItem('smde_geko-article-editor') to remove old data"
+  - "Consider adding autosave for new articles with session-based ID if users request it"
+
+files:
+  created: []
+  modified:
+    - webapp/app/templates/standard/articles/form.html
+    - webapp/static/js/editor.js

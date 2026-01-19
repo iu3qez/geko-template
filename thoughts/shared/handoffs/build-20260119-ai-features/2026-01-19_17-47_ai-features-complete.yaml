@@ -1,0 +1,66 @@
+---
+session: build-20260119-ai-features
+date: 2026-01-19
+status: complete
+outcome: PARTIAL_PLUS
+---
+
+goal: Add AI summary regeneration button and model selection in settings
+now: Test the features in browser - verify model switching and regeneration work
+test: "Open webapp at /articles/ and /config/ to verify UI changes"
+
+done_this_session:
+  - task: Added regenerate AI summary button for articles with existing summaries
+    files: [webapp/app/templates/standard/articles/list_item.html:70-91]
+  - task: Added AI model selection dropdown in settings (Haiku 3.5 / Sonnet 4)
+    files: [webapp/app/templates/standard/config/panel.html:104-127]
+  - task: Added claude_model to Config.DEFAULTS
+    files: [webapp/app/models.py:134]
+  - task: Refactored ClaudeSummaryService to accept model parameter
+    files: [webapp/app/services/llm.py:48-75]
+  - task: Removed singleton pattern for per-request model configuration
+    files: [webapp/app/services/llm.py:159-183]
+  - task: Updated generate_summary route to fetch model from config
+    files: [webapp/app/routes/articles.py:240-278]
+  - task: Fixed HTMX response to return full list_item.html (not summary_badge.html)
+    files: [webapp/app/routes/articles.py:272-275]
+  - task: Pulled and reviewed remote fix c107ac9 (SQLAlchemy async lazy-load fix)
+    files: []
+  - task: Committed and pushed to origin/main
+    files: []
+
+blockers: []
+
+questions: []
+
+decisions:
+  - remove_singleton: "Per-request service creation allows model selection to change dynamically without restart"
+  - use_selectinload: "Consistent with remote fix pattern for async lazy-load prevention"
+  - confirmation_dialog: "Added hx-confirm for regenerate to prevent accidental overwrites"
+
+findings:
+  - htmx_swap_issue: "Original code returned summary_badge.html but HTMX swapped outerHTML of entire article card - needed to return full list_item.html"
+  - model_ids: "Validated: claude-3-5-haiku-20241022 and claude-sonnet-4-20250514 are correct 2025 model IDs"
+
+worked:
+  - "Data attribute pattern for passing config to templates"
+  - "Dependency injection instead of singleton for configurable services"
+  - "Re-query with selectinload after commit (from remote fix)"
+
+failed: []
+
+next:
+  - "Manual test: change model in settings, verify it persists"
+  - "Manual test: regenerate summary, verify new model is used"
+  - "Consider adding model allowlist validation in ClaudeSummaryService"
+  - "Consider logging which model generated each summary"
+
+files:
+  created:
+    - thoughts/shared/plans/PLAN-ai-features.md
+  modified:
+    - webapp/app/models.py
+    - webapp/app/routes/articles.py
+    - webapp/app/services/llm.py
+    - webapp/app/templates/standard/articles/list_item.html
+    - webapp/app/templates/standard/config/panel.html

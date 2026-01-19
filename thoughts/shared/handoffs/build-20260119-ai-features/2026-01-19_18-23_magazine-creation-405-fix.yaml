@@ -1,0 +1,53 @@
+---
+session: build-20260119-ai-features
+date: 2026-01-19
+status: complete
+outcome: SUCCEEDED
+---
+
+goal: Fix 405 error and page stuck when creating new magazine
+now: Test magazine creation flow in browser - should redirect to detail page
+test: "Create new magazine at /magazines/new - verify redirect to detail page, no 405 errors"
+
+done_this_session:
+  - task: Diagnosed 405 GET /upload/image/1 error during magazine creation
+    files: [webapp/app/templates/standard/magazines/form.html:81]
+  - task: Fixed HTMX form to use HX-Redirect instead of template response
+    files: [webapp/app/routes/magazines.py:119-128]
+  - task: Fixed broken onerror handler that tried invalid URL
+    files: [webapp/app/templates/standard/magazines/form.html:81, webapp/app/templates/standard/magazines/form.html:179]
+  - task: Bumped Dockerfile version to force GitHub rebuild
+    files: [webapp/Dockerfile:45]
+  - task: Committed and pushed fix
+    files: []
+
+blockers: []
+
+questions: []
+
+decisions:
+  - hx_redirect_over_template: "HX-Redirect header causes full page navigation, template response was being inserted into small #form-result div"
+  - graceful_onerror: "Replace broken /upload/image/1 URL with CSS placeholder styling instead of another image"
+
+findings:
+  - root_cause_405: "form.html had onerror='this.src=/upload/image/1' but that endpoint only accepts DELETE, not GET"
+  - htmx_target_mismatch: "Form used hx-target='#form-result' but server returned full detail.html page - content went into wrong div"
+  - missing_default_cover: "/static/images/default-cover.jpg doesn't exist, directory not created"
+
+worked:
+  - "HX-Redirect header for proper HTMX navigation after form submission"
+  - "Inline onerror handler with this.onerror=null to prevent loops"
+
+failed: []
+
+next:
+  - "User testing: create new magazine, verify redirect works"
+  - "Consider creating /static/images/ with actual default-cover.jpg"
+  - "Similar issue may exist in article image upload flow (user mentioned)"
+
+files:
+  created: []
+  modified:
+    - webapp/app/routes/magazines.py
+    - webapp/app/templates/standard/magazines/form.html
+    - webapp/Dockerfile
