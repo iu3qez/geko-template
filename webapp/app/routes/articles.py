@@ -33,7 +33,7 @@ from sqlalchemy.orm import selectinload
 from typing import List
 
 from app.database import get_db
-from app.models import Article, Magazine
+from app.models import Article, Magazine, Config
 from app.services.converter import MarkdownToTypstConverter
 from app.services.llm import generate_article_summary
 
@@ -252,19 +252,31 @@ async def generate_summary(
     if not article:
         raise HTTPException(status_code=404, detail="Articolo non trovato")
 
+    # Get configured Claude model
+    claude_model = await Config.get(db, "claude_model")
+
     # Generate summary using Claude
     summary_data = await generate_article_summary(
         article.contenuto_md,
-        article.titolo
+        article.titolo,
+        model=claude_model
     )
 
     article.sommario_llm = summary_data.get("sommario", "")
     await db.commit()
 
+    # Re-query with eager loading to avoid lazy-load in template
+    result = await db.execute(
+        select(Article)
+        .options(selectinload(Article.magazines))
+        .where(Article.id == article.id)
+    )
+    article = result.scalar_one()
+
     templates = request.app.state.templates
     return templates.TemplateResponse(
-        "standard/articles/summary_badge.html",
-        {"request": request, "article": article, "summary": summary_data}
+        "standard/articles/list_item.html",
+        {"request": request, "article": article}
     )
 
 

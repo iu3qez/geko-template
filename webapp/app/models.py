@@ -131,6 +131,7 @@ class Config(Base):
         "sottotitolo_rivista": ("Rivista aperiodica del Mountain QRP Club", "Sottotitolo/descrizione"),
         "sito_web": ("https://www.mqc.it", "Sito web del club"),
         "email_redazione": ("redazione@mqc.it", "Email della redazione"),
+        "claude_model": ("claude-3-5-haiku-20241022", "Modello Claude per generazione sommari AI"),
     }
 
     @classmethod

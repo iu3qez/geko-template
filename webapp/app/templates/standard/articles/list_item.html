@@ -67,8 +67,20 @@
             📎 Assegna
         </button>
 
-        <!-- Genera sommario AI -->
-        {% if not article.sommario_llm %}
+        <!-- Genera/Rigenera sommario AI -->
+        {% if article.sommario_llm %}
+        <button
+            class="btn btn-small btn-outline"
+            hx-post="/articles/{{ article.id }}/summary"
+            hx-target="#article-{{ article.id }}"
+            hx-swap="outerHTML"
+            hx-indicator="#loading-{{ article.id }}"
+            hx-confirm="Vuoi rigenerare il sommario AI? Il sommario attuale verrà sostituito."
+            title="Rigenera sommario AI"
+        >
+            🔄 Rigenera
+        </button>
+        {% else %}
         <button
             class="btn btn-small btn-outline"
             hx-post="/articles/{{ article.id }}/summary"
@@ -79,8 +91,8 @@
         >
             🤖 Genera sommario
         </button>
-        <span id="loading-{{ article.id }}" class="htmx-indicator">Generando...</span>
         {% endif %}
+        <span id="loading-{{ article.id }}" class="htmx-indicator">Generando...</span>
 
         <!-- Modifica -->
         <a href="/articles/{{ article.id }}/edit" class="btn btn-small">

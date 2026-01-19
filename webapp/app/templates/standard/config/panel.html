@@ -101,6 +101,28 @@
             </div>
         </fieldset>
 
+        <!-- Impostazioni AI -->
+        <fieldset class="form-section">
+            <legend>Impostazioni AI</legend>
+
+            <div class="form-group">
+                <label for="claude_model">Modello Claude</label>
+                <select
+                    id="claude_model"
+                    name="claude_model"
+                    class="input-select"
+                >
+                    <option value="claude-3-5-haiku-20241022" {% if configs.claude_model.value == "claude-3-5-haiku-20241022" %}selected{% endif %}>
+                        Haiku 3.5 - Veloce ed economico
+                    </option>
+                    <option value="claude-sonnet-4-20250514" {% if configs.claude_model.value == "claude-sonnet-4-20250514" %}selected{% endif %}>
+                        Sonnet 4 - Più capace, più costoso
+                    </option>
+                </select>
+                <span class="form-hint">{{ configs.claude_model.description }}</span>
+            </div>
+        </fieldset>
+
         <!-- Template (futuro) -->
         <fieldset class="form-section form-section-disabled">
             <legend>Template Typst (prossimamente)</legend>

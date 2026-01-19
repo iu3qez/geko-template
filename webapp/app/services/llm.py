@@ -52,14 +52,16 @@ class ClaudeSummaryService:
     Attributes:
         api_key: Chiave API Anthropic
         base_url: Endpoint API
-        model: Modello Claude da usare (default: claude-sonnet-4-20250514)
+        model: Modello Claude da usare (default: claude-3-5-haiku-20241022)
     """
 
-    def __init__(self, api_key: Optional[str] = None):
+    # Default model if none specified
+    DEFAULT_MODEL = "claude-3-5-haiku-20241022"
+
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         self.api_key = api_key or _load_api_key()
         self.base_url = "https://api.anthropic.com/v1/messages"
-        # Haiku 3.5: economico ($0.25-1.25/1M token), veloce, qualità buona per sommari
-        self.model = "claude-3-5-haiku-20241022"
+        self.model = model or self.DEFAULT_MODEL
 
     async def generate_summary(self, article_content: str, article_title: str) -> dict:
         """
@@ -154,21 +156,30 @@ Rispondi SOLO con un JSON valido in questo formato:
         return summaries
 
 
-# Global instance
-_summary_service: Optional[ClaudeSummaryService] = None
+def get_summary_service(model: Optional[str] = None) -> ClaudeSummaryService:
+    """
+    Get a summary service instance.
+
+    Args:
+        model: Optional model ID. If provided, creates service with that model.
+               If None, uses DEFAULT_MODEL.
+
+    Returns:
+        ClaudeSummaryService instance
+    """
+    return ClaudeSummaryService(model=model)
 
 
-def get_summary_service() -> ClaudeSummaryService:
-    """Get or create the summary service instance."""
-    global _summary_service
-    if _summary_service is None:
-        _summary_service = ClaudeSummaryService()
-    return _summary_service
+async def generate_article_summary(content: str, title: str, model: Optional[str] = None) -> dict:
+    """
+    Convenience function for generating a single summary.
 
-
-async def generate_article_summary(content: str, title: str) -> dict:
-    """Convenience function for generating a single summary."""
-    service = get_summary_service()
+    Args:
+        content: Article content in markdown
+        title: Article title
+        model: Optional Claude model ID (fetched from config by caller)
+    """
+    service = get_summary_service(model=model)
     return await service.generate_summary(content, title)
 
 
