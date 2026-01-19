@@ -42,7 +42,7 @@ FROM python:3.11-slim as runtime
 # Metadata
 LABEL maintainer="GEKO Magazine Team"
 LABEL description="GEKO Radio Magazine Web App"
-LABEL version="1.0.0"
+LABEL version="1.0.1"
 
 # Variabili ambiente
 ENV PYTHONDONTWRITEBYTECODE=1

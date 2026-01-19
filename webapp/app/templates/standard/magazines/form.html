@@ -78,8 +78,8 @@
 
                 <div class="cover-selection">
                     <div class="cover-preview" id="cover-preview">
-                        <img src="/static/images/default-cover.jpg" alt="Copertina default" onerror="this.src='/upload/image/1'">
-                        <span class="cover-label">Default</span>
+                        <img src="/static/images/default-cover.jpg" alt="Nessuna copertina selezionata" onerror="this.onerror=null; this.style.background='#ddd'; this.style.minHeight='120px'; this.style.minWidth='80px';">
+                        <span class="cover-label">Nessuna</span>
                     </div>
                     <button type="button" class="btn btn-secondary" onclick="openCoverLibrary()">
                         Scegli dalla libreria
@@ -176,8 +176,8 @@ function clearCoverImage(e) {
     e.preventDefault();
     document.getElementById('copertina_id').value = '';
     document.getElementById('cover-preview').innerHTML = `
-        <img src="/static/images/default-cover.jpg" alt="Copertina default">
-        <span class="cover-label">Default</span>
+        <img src="/static/images/default-cover.jpg" alt="Nessuna copertina selezionata" onerror="this.onerror=null; this.style.background='#ddd'; this.style.minHeight='120px'; this.style.minWidth='80px';">
+        <span class="cover-label">Nessuna</span>
     `;
 }
 

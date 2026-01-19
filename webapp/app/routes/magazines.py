@@ -25,7 +25,7 @@ Workflow tipico:
 """
 
 from pathlib import Path
-from fastapi import APIRouter, Depends, HTTPException, Form, Request
+from fastapi import APIRouter, Depends, HTTPException, Form, Request, Response
 from fastapi.responses import HTMLResponse, FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -120,11 +120,14 @@ async def create_magazine(
     await db.commit()
     await db.refresh(magazine)
 
-    templates = request.app.state.templates
-    return templates.TemplateResponse(
-        "standard/magazines/detail.html",
-        {"request": request, "magazine": magazine},
-        headers={"HX-Trigger": "magazineCreated"}
+    # Redirect to the new magazine's detail page
+    # HX-Redirect tells HTMX to do a full page navigation
+    return Response(
+        status_code=200,
+        headers={
+            "HX-Redirect": f"/magazines/{magazine.id}",
+            "HX-Trigger": "magazineCreated"
+        }
     )
 
 
