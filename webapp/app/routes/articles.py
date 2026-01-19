@@ -106,7 +106,14 @@ async def create_article(
 
     db.add(article)
     await db.commit()
-    await db.refresh(article)
+
+    # Re-query with eager loading to avoid lazy-load in template
+    result = await db.execute(
+        select(Article)
+        .options(selectinload(Article.magazines))
+        .where(Article.id == article.id)
+    )
+    article = result.scalar_one()
 
     # Return updated list (for HTMX)
     templates = request.app.state.templates
@@ -323,6 +330,14 @@ async def assign_article(
         article.magazines.extend(magazines)
 
     await db.commit()
+
+    # Re-query with eager loading to ensure magazines is loaded
+    result = await db.execute(
+        select(Article)
+        .options(selectinload(Article.magazines))
+        .where(Article.id == article.id)
+    )
+    article = result.scalar_one()
 
     # Return updated article card
     templates = request.app.state.templates

@@ -471,7 +471,14 @@ async def upload_markdown(
 
     db.add(article)
     await db.commit()
-    await db.refresh(article)
+
+    # Re-query with eager loading to avoid lazy-load in template
+    result = await db.execute(
+        select(Article)
+        .options(selectinload(Article.magazines))
+        .where(Article.id == article.id)
+    )
+    article = result.scalar_one()
 
     templates = request.app.state.templates
     return templates.TemplateResponse(
