@@ -656,6 +656,34 @@
     font-size: 3rem;
 }
 
+.build-error {
+    text-align: center;
+    padding: var(--space-xl);
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: var(--radius-md);
+    margin: var(--space-lg) 0;
+}
+
+.error-icon {
+    font-size: 3rem;
+}
+
+.error-message {
+    background: rgba(0,0,0,0.05);
+    padding: var(--space-md);
+    border-radius: var(--radius-sm);
+    font-family: monospace;
+    font-size: 0.9rem;
+    word-break: break-word;
+    margin: var(--space-md) 0;
+}
+
+.error-hint {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
 /* =============================================================================
    FORM CONTAINERS
    ============================================================================= */
