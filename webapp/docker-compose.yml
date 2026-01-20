@@ -2,7 +2,11 @@
 # GEKO Magazine Web App - Docker Compose
 # =============================================================================
 #
-# Orchestrazione container per deploy semplice.
+# Architettura:
+#   - Backend: FastAPI (JSON API)
+#   - Frontend: Svelte SPA (built durante docker build)
+#   - Database: SQLite
+#   - PDF: Typst
 #
 # Uso:
 #   # Avvio (sviluppo - con .env file)
@@ -17,7 +21,7 @@
 #   # Stop
 #   docker-compose down
 #
-#   # Rebuild dopo modifiche
+#   # Rebuild dopo modifiche (ricompila anche frontend Svelte)
 #   docker-compose up -d --build
 #
 # Gestione Secrets (3 opzioni):

@@ -3,8 +3,9 @@
 # =============================================================================
 #
 # Build multi-stage per immagine ottimizzata:
-# 1. Stage "builder": installa dipendenze Python
-# 2. Stage "runtime": immagine finale leggera
+# 1. Stage "frontend": build Svelte app
+# 2. Stage "builder": installa dipendenze Python
+# 3. Stage "runtime": immagine finale leggera
 #
 # Uso:
 #   docker build -t geko-webapp .
@@ -16,7 +17,26 @@
 
 # =============================================================================
 # -----------------------------------------------------------------------------
-# Stage 1: Builder - Installazione dipendenze
+# Stage 1: Frontend - Build Svelte app
+# -----------------------------------------------------------------------------
+FROM node:20-slim as frontend
+
+WORKDIR /frontend
+
+# Copia package files
+COPY frontend/package*.json ./
+
+# Installa dipendenze
+RUN npm install
+
+# Copia sorgenti frontend
+COPY frontend/ .
+
+# Build produzione
+RUN npm run build
+
+# -----------------------------------------------------------------------------
+# Stage 2: Builder - Installazione dipendenze Python
 # -----------------------------------------------------------------------------
 FROM python:3.11-slim as builder
 
@@ -69,8 +89,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /build/wheels /wheels
 RUN pip install --no-cache /wheels/*
 
-# Copia applicazione
-COPY --chown=geko:geko . .
+# Copia applicazione (escludi frontend sorgenti)
+COPY --chown=geko:geko app/ ./app/
+COPY --chown=geko:geko static/ ./static/
+
+# Copia frontend build output
+COPY --from=frontend --chown=geko:geko /frontend/build ./frontend/build
 
 # Crea directory dati con permessi corretti
 # Nota: creiamo un file vuoto per template.typ così Docker può montare un file sopra

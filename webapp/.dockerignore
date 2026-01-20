@@ -45,8 +45,14 @@ data/
 
 # Build artifacts
 dist/
-build/
 *.egg-info
 
 # Typst directory (template.typ is mounted as volume)
 typst/template.typ
+
+# Frontend (node_modules excluded, build copied separately)
+frontend/node_modules
+frontend/.svelte-kit
+
+# Secrets
+secrets/

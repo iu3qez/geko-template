@@ -1,0 +1,608 @@
+<script lang="ts">
+	import { onMount } from 'svelte';
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
+	import {
+		ArrowLeft, Edit, Download, FileText, Plus, Trash2,
+		GripVertical, CheckCircle, AlertCircle, Loader
+	} from 'lucide-svelte';
+	import { Button, Badge, Card, Loading, Modal, Input, Textarea, Select } from '$lib/components/ui';
+	import { magazines, articles as articlesApi } from '$lib/api';
+	import type { Magazine, Article } from '$lib/api';
+
+	const magazineId = $derived(parseInt($page.params.id));
+
+	let magazine = $state<Magazine | null>(null);
+	let allArticles = $state<Article[]>([]);
+	let loading = $state(true);
+	let error = $state<string | null>(null);
+
+	// Edit mode
+	let editing = $state(false);
+	let editData = $state({
+		numero: '',
+		mese: '',
+		anno: '',
+		stato: 'bozza',
+		editoriale: '',
+		editoriale_autore: ''
+	});
+	let saving = $state(false);
+
+	// Build PDF
+	let building = $state(false);
+	let buildResult = $state<{ status: string; error?: string } | null>(null);
+
+	// Add article modal
+	let addArticleModal = $state(false);
+	let selectedArticleId = $state<number | null>(null);
+	let addingArticle = $state(false);
+
+	// Delete confirmation
+	let deleteModal = $state(false);
+	let deleting = $state(false);
+
+	const mesi = [
+		'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+		'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
+	];
+
+	onMount(async () => {
+		await loadMagazine();
+	});
+
+	async function loadMagazine() {
+		loading = true;
+		error = null;
+		try {
+			const [mag, arts] = await Promise.all([
+				magazines.get(magazineId),
+				articlesApi.list()
+			]);
+			magazine = mag;
+			allArticles = arts;
+			editData = {
+				numero: mag.numero,
+				mese: mag.mese,
+				anno: mag.anno,
+				stato: mag.stato,
+				editoriale: mag.editoriale,
+				editoriale_autore: mag.editoriale_autore
+			};
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Errore nel caricamento';
+		} finally {
+			loading = false;
+		}
+	}
+
+	async function handleSave() {
+		if (!magazine) return;
+
+		saving = true;
+		error = null;
+		try {
+			magazine = await magazines.update(magazine.id, editData);
+			editing = false;
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Errore durante il salvataggio';
+		} finally {
+			saving = false;
+		}
+	}
+
+	async function handleBuild() {
+		if (!magazine) return;
+
+		building = true;
+		buildResult = null;
+		try {
+			const result = await magazines.build(magazine.id);
+			buildResult = result;
+			if (result.status === 'success') {
+				// Refresh to update state
+				await loadMagazine();
+			}
+		} catch (e) {
+			buildResult = { status: 'error', error: e instanceof Error ? e.message : 'Errore' };
+		} finally {
+			building = false;
+		}
+	}
+
+	async function handleAddArticle() {
+		if (!magazine || !selectedArticleId) return;
+
+		addingArticle = true;
+		try {
+			await magazines.addArticle(magazine.id, selectedArticleId);
+			await loadMagazine();
+			addArticleModal = false;
+			selectedArticleId = null;
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Errore';
+		} finally {
+			addingArticle = false;
+		}
+	}
+
+	async function handleRemoveArticle(articleId: number) {
+		if (!magazine) return;
+
+		try {
+			await magazines.removeArticle(magazine.id, articleId);
+			await loadMagazine();
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Errore';
+		}
+	}
+
+	async function handleDelete() {
+		if (!magazine) return;
+
+		deleting = true;
+		try {
+			await magazines.delete(magazine.id);
+			goto('/magazines');
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Errore durante la cancellazione';
+		} finally {
+			deleting = false;
+		}
+	}
+
+	const availableArticles = $derived(
+		allArticles.filter(a => !magazine?.articles.some(ma => ma.id === a.id))
+	);
+</script>
+
+<svelte:head>
+	<title>{magazine ? `GEKO #${magazine.numero}` : 'Dettaglio Numero'} - GEKO Radio Magazine</title>
+</svelte:head>
+
+<div class="magazine-detail">
+	<header class="page-header">
+		<Button href="/magazines" variant="ghost" size="sm">
+			<ArrowLeft size={18} />
+			Torna ai numeri
+		</Button>
+	</header>
+
+	{#if loading}
+		<Loading text="Caricamento..." />
+	{:else if error}
+		<div class="error-message">
+			<p>{error}</p>
+			<Button onclick={loadMagazine}>Riprova</Button>
+		</div>
+	{:else if magazine}
+		<div class="magazine-header">
+			<div class="magazine-title">
+				<h1>GEKO #{magazine.numero}</h1>
+				<Badge variant={magazine.stato === 'pubblicato' ? 'success' : 'warning'}>
+					{magazine.stato}
+				</Badge>
+			</div>
+			<p class="magazine-date">{magazine.mese} {magazine.anno}</p>
+		</div>
+
+		<div class="content-grid">
+			<section class="magazine-info-section">
+				<Card>
+					{#snippet header()}
+						<div class="card-header-row">
+							<h2>Informazioni</h2>
+							{#if !editing}
+								<Button variant="ghost" size="sm" onclick={() => editing = true}>
+									<Edit size={16} />
+									Modifica
+								</Button>
+							{/if}
+						</div>
+					{/snippet}
+
+					{#if editing}
+						<form onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
+							<div class="form-grid">
+								<Input label="Numero" bind:value={editData.numero} required />
+								<Select label="Mese" bind:value={editData.mese}>
+									{#each mesi as m}
+										<option value={m}>{m}</option>
+									{/each}
+								</Select>
+								<Input label="Anno" bind:value={editData.anno} required />
+							</div>
+
+							<Select label="Stato" bind:value={editData.stato}>
+								<option value="bozza">Bozza</option>
+								<option value="pubblicato">Pubblicato</option>
+							</Select>
+
+							<Textarea
+								label="Editoriale"
+								bind:value={editData.editoriale}
+								rows={4}
+							/>
+
+							<Input
+								label="Autore Editoriale"
+								bind:value={editData.editoriale_autore}
+							/>
+
+							<div class="form-actions">
+								<Button variant="ghost" onclick={() => editing = false}>
+									Annulla
+								</Button>
+								<Button type="submit" loading={saving}>
+									Salva
+								</Button>
+							</div>
+						</form>
+					{:else}
+						<dl class="info-list">
+							<div>
+								<dt>Editoriale</dt>
+								<dd>{magazine.editoriale || 'Non inserito'}</dd>
+							</div>
+							{#if magazine.editoriale_autore}
+								<div>
+									<dt>Autore Editoriale</dt>
+									<dd>{magazine.editoriale_autore}</dd>
+								</div>
+							{/if}
+						</dl>
+					{/if}
+				</Card>
+
+				<Card>
+					{#snippet header()}
+						<h2>Azioni</h2>
+					{/snippet}
+
+					<div class="actions-list">
+						<Button onclick={handleBuild} loading={building} disabled={magazine.articles.length === 0}>
+							{#if building}
+								Generazione in corso...
+							{:else}
+								Genera PDF
+							{/if}
+						</Button>
+
+						{#if magazine.stato === 'pubblicato'}
+							<Button href="/api/magazines/{magazine.id}/pdf" variant="secondary">
+								<Download size={18} />
+								Scarica PDF
+							</Button>
+						{/if}
+
+						<Button variant="danger" onclick={() => deleteModal = true}>
+							<Trash2 size={18} />
+							Elimina Numero
+						</Button>
+					</div>
+
+					{#if buildResult}
+						<div class="build-result build-{buildResult.status}">
+							{#if buildResult.status === 'success'}
+								<CheckCircle size={20} />
+								<span>PDF generato con successo!</span>
+							{:else}
+								<AlertCircle size={20} />
+								<span>{buildResult.error || 'Errore durante la generazione'}</span>
+							{/if}
+						</div>
+					{/if}
+				</Card>
+			</section>
+
+			<section class="articles-section">
+				<Card>
+					{#snippet header()}
+						<div class="card-header-row">
+							<h2>Articoli ({magazine.articles.length})</h2>
+							<Button variant="outline" size="sm" onclick={() => addArticleModal = true}>
+								<Plus size={16} />
+								Aggiungi
+							</Button>
+						</div>
+					{/snippet}
+
+					{#if magazine.articles.length === 0}
+						<p class="no-articles">
+							Nessun articolo in questo numero.<br />
+							Aggiungi articoli per poter generare il PDF.
+						</p>
+					{:else}
+						<ul class="articles-list">
+							{#each magazine.articles as article, idx}
+								<li class="article-item">
+									<div class="article-drag">
+										<GripVertical size={16} />
+									</div>
+									<span class="article-order">{idx + 1}</span>
+									<a href="/articles/{article.id}" class="article-info">
+										<strong>{article.titolo}</strong>
+										{#if article.autore}
+											<span class="article-author">{article.autore}</span>
+										{/if}
+									</a>
+									<button
+										class="remove-btn"
+										onclick={() => handleRemoveArticle(article.id)}
+										aria-label="Rimuovi articolo"
+									>
+										<Trash2 size={14} />
+									</button>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+				</Card>
+			</section>
+		</div>
+	{/if}
+</div>
+
+<Modal bind:open={addArticleModal} title="Aggiungi Articolo" size="md">
+	{#if availableArticles.length === 0}
+		<p>Non ci sono articoli disponibili da aggiungere.</p>
+		<p>
+			<a href="/articles/new">Crea un nuovo articolo</a>
+		</p>
+	{:else}
+		<Select label="Seleziona articolo" bind:value={selectedArticleId}>
+			<option value={null}>Seleziona...</option>
+			{#each availableArticles as article}
+				<option value={article.id}>
+					{article.titolo} {article.autore ? `(${article.autore})` : ''}
+				</option>
+			{/each}
+		</Select>
+	{/if}
+
+	{#snippet footer()}
+		<Button variant="ghost" onclick={() => addArticleModal = false}>
+			Annulla
+		</Button>
+		<Button
+			onclick={handleAddArticle}
+			loading={addingArticle}
+			disabled={!selectedArticleId}
+		>
+			Aggiungi
+		</Button>
+	{/snippet}
+</Modal>
+
+<Modal bind:open={deleteModal} title="Conferma Eliminazione" size="sm">
+	<p>
+		Sei sicuro di voler eliminare <strong>GEKO #{magazine?.numero}</strong>?
+	</p>
+	<p class="warning-text">
+		Questa azione non può essere annullata. Gli articoli non verranno eliminati.
+	</p>
+
+	{#snippet footer()}
+		<Button variant="ghost" onclick={() => deleteModal = false}>
+			Annulla
+		</Button>
+		<Button variant="danger" onclick={handleDelete} loading={deleting}>
+			Elimina
+		</Button>
+	{/snippet}
+</Modal>
+
+<style>
+	.magazine-detail {
+		animation: fadeIn var(--transition-base);
+	}
+
+	.page-header {
+		margin-bottom: var(--space-4);
+	}
+
+	.magazine-header {
+		margin-bottom: var(--space-6);
+	}
+
+	.magazine-title {
+		display: flex;
+		align-items: center;
+		gap: var(--space-4);
+	}
+
+	.magazine-title h1 {
+		color: var(--geko-gold);
+	}
+
+	.magazine-date {
+		color: var(--geko-gray);
+		font-size: var(--text-lg);
+		margin: var(--space-2) 0 0;
+	}
+
+	.content-grid {
+		display: grid;
+		grid-template-columns: 1fr 1.5fr;
+		gap: var(--space-6);
+	}
+
+	.card-header-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.card-header-row h2 {
+		font-size: var(--text-lg);
+		margin: 0;
+	}
+
+	.form-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: var(--space-4);
+		margin-bottom: var(--space-4);
+	}
+
+	.form-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: var(--space-3);
+		margin-top: var(--space-4);
+		padding-top: var(--space-4);
+		border-top: 1px solid var(--geko-gray-light);
+	}
+
+	.info-list {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-4);
+	}
+
+	.info-list dt {
+		font-size: var(--text-sm);
+		color: var(--geko-gray);
+		margin-bottom: var(--space-1);
+	}
+
+	.info-list dd {
+		margin: 0;
+	}
+
+	.actions-list {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-3);
+	}
+
+	.build-result {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		padding: var(--space-3);
+		border-radius: var(--radius-md);
+		margin-top: var(--space-4);
+		font-size: var(--text-sm);
+	}
+
+	.build-success {
+		background: var(--color-success-light);
+		color: var(--color-success);
+	}
+
+	.build-error {
+		background: var(--color-danger-light);
+		color: var(--color-danger);
+	}
+
+	.no-articles {
+		text-align: center;
+		color: var(--geko-gray);
+		padding: var(--space-6);
+	}
+
+	.articles-list {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+	}
+
+	.article-item {
+		display: flex;
+		align-items: center;
+		gap: var(--space-3);
+		padding: var(--space-3);
+		border-bottom: 1px solid var(--geko-gray-light);
+	}
+
+	.article-item:last-child {
+		border-bottom: none;
+	}
+
+	.article-drag {
+		color: var(--geko-gray-light);
+		cursor: grab;
+	}
+
+	.article-order {
+		font-family: var(--font-display);
+		font-size: var(--text-sm);
+		color: var(--geko-gray);
+		width: 24px;
+		text-align: center;
+	}
+
+	.article-info {
+		flex: 1;
+		text-decoration: none;
+		color: inherit;
+	}
+
+	.article-info:hover {
+		text-decoration: none;
+	}
+
+	.article-info strong {
+		display: block;
+		font-size: var(--text-sm);
+	}
+
+	.article-info:hover strong {
+		color: var(--geko-magenta);
+	}
+
+	.article-author {
+		font-size: var(--text-xs);
+		color: var(--geko-gray);
+	}
+
+	.remove-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: var(--space-2);
+		background: none;
+		border: none;
+		color: var(--geko-gray);
+		cursor: pointer;
+		border-radius: var(--radius-md);
+	}
+
+	.remove-btn:hover {
+		background: var(--color-danger-light);
+		color: var(--color-danger);
+	}
+
+	.error-message {
+		background: var(--color-danger-light);
+		color: var(--color-danger);
+		padding: var(--space-6);
+		border-radius: var(--radius-md);
+		text-align: center;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--space-4);
+	}
+
+	.warning-text {
+		color: var(--color-danger);
+		font-size: var(--text-sm);
+	}
+
+	@media (max-width: 768px) {
+		.content-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.form-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	@keyframes fadeIn {
+		from { opacity: 0; }
+		to { opacity: 1; }
+	}
+</style>

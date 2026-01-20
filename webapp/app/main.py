@@ -14,7 +14,7 @@ Funzionalità principali:
 Stack tecnologico:
     - FastAPI: Web framework async
     - SQLite + SQLAlchemy: Database
-    - Jinja2 + HTMX: Frontend reattivo senza JavaScript complesso
+    - Svelte: Frontend SPA
     - Typst: Generazione PDF
     - Claude API: Generazione sommari
 
@@ -36,19 +36,18 @@ Licenza: MIT
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse
 
 from app.database import init_db
-from app.routes import articles, magazines, upload, config
+from app.routes.api import router as api_router
 
 # Directory paths
 APP_DIR = Path(__file__).parent
 WEBAPP_DIR = APP_DIR.parent
 STATIC_DIR = WEBAPP_DIR / "static"
-TEMPLATES_DIR = APP_DIR / "templates"
+FRONTEND_DIR = WEBAPP_DIR / "frontend" / "build"
 
 
 @asynccontextmanager
@@ -71,8 +70,7 @@ async def lifespan(app: FastAPI):
     print("Database inizializzato")
 
     # Crea directory se non esistono
-    (WEBAPP_DIR / "data" / "articles").mkdir(parents=True, exist_ok=True)
-    (WEBAPP_DIR / "data" / "images").mkdir(parents=True, exist_ok=True)
+    (WEBAPP_DIR / "data" / "uploads").mkdir(parents=True, exist_ok=True)
     (WEBAPP_DIR / "data" / "output").mkdir(parents=True, exist_ok=True)
     (WEBAPP_DIR / "typst" / "generated").mkdir(parents=True, exist_ok=True)
     print("Directory create")
@@ -89,110 +87,35 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="GEKO Magazine",
     description="Web app per generare il GEKO Radio Magazine",
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
-# Monta file statici (CSS, JS, immagini)
+# Monta file statici legacy (CSS, JS)
 STATIC_DIR.mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
-# Monta directory immagini per accesso diretto
+# Monta directory immagini caricate per accesso diretto
+UPLOADS_DIR = WEBAPP_DIR / "data" / "uploads"
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
+
+# Monta immagini con path legacy /images
 IMAGES_DIR = WEBAPP_DIR / "data" / "images"
-IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/images", StaticFiles(directory=str(IMAGES_DIR)), name="images")
+if IMAGES_DIR.exists():
+    app.mount("/images", StaticFiles(directory=str(IMAGES_DIR)), name="images")
 
-# Configura templates Jinja2
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+# JSON API routes
+app.include_router(api_router)
 
-# Rendi templates disponibili globalmente nell'app
-app.state.templates = templates
-
-# Registra routers
-app.include_router(articles.router)
-app.include_router(magazines.router)
-app.include_router(upload.router)
-app.include_router(config.router)
+# Mount Svelte frontend build assets
+if FRONTEND_DIR.exists() and (FRONTEND_DIR / "_app").exists():
+    app.mount("/_app", StaticFiles(directory=str(FRONTEND_DIR / "_app")), name="svelte_app")
 
 
 # =============================================================================
-# ROUTES PRINCIPALI
+# HEALTH CHECK
 # =============================================================================
-
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    """
-    Homepage dell'applicazione.
-
-    Mostra:
-        - Dashboard con statistiche (numero articoli, numeri pubblicati)
-        - Accesso rapido alle funzioni principali
-        - Link alla modalità semplice (accessibile)
-    """
-    return templates.TemplateResponse(
-        "standard/home.html",
-        {"request": request}
-    )
-
-
-@app.get("/simple", response_class=HTMLResponse)
-async def simple_mode(request: Request):
-    """
-    Homepage modalità semplice (accessibile).
-
-    Interfaccia ottimizzata per:
-        - Utenti con difficoltà motorie (es. Parkinson)
-        - Bottoni grandi e ben distanziati
-        - Una azione per schermata
-        - Alto contrasto
-    """
-    return templates.TemplateResponse(
-        "simple/home.html",
-        {"request": request}
-    )
-
-
-@app.get("/simple/upload", response_class=HTMLResponse)
-async def simple_upload(request: Request):
-    """
-    Pagina upload articolo - modalità semplice.
-
-    Step 1 del workflow semplificato.
-    Un solo bottone grande per caricare il file markdown.
-    """
-    return templates.TemplateResponse(
-        "simple/upload.html",
-        {"request": request}
-    )
-
-
-@app.get("/simple/images", response_class=HTMLResponse)
-async def simple_images(request: Request):
-    """
-    Pagina upload immagini - modalità semplice.
-
-    Step 2 del workflow semplificato.
-    Drag & drop o click per caricare immagini.
-    """
-    return templates.TemplateResponse(
-        "simple/images.html",
-        {"request": request}
-    )
-
-
-@app.get("/simple/generate", response_class=HTMLResponse)
-async def simple_generate(request: Request):
-    """
-    Pagina generazione PDF - modalità semplice.
-
-    Step finale del workflow semplificato.
-    Un solo bottone per generare e scaricare il PDF.
-    """
-    return templates.TemplateResponse(
-        "simple/generate.html",
-        {"request": request}
-    )
-
 
 @app.get("/health")
 async def health_check():
@@ -206,38 +129,42 @@ async def health_check():
     """
     return {
         "status": "ok",
-        "version": "1.0.0",
+        "version": "2.0.0",
         "app": "GEKO Magazine"
     }
 
 
 # =============================================================================
-# ERROR HANDLERS
+# SVELTE SPA
 # =============================================================================
 
-@app.exception_handler(404)
-async def not_found_handler(request: Request, exc):
-    """
-    Handler per errori 404 (pagina non trovata).
-
-    Mostra una pagina user-friendly invece del JSON di default.
-    """
-    return templates.TemplateResponse(
-        "errors/404.html",
-        {"request": request},
-        status_code=404
-    )
+@app.get("/favicon.png")
+async def favicon():
+    """Serve favicon."""
+    favicon_path = FRONTEND_DIR / "favicon.png"
+    if favicon_path.exists():
+        return FileResponse(favicon_path)
+    return FileResponse(STATIC_DIR / "favicon.png")
 
 
-@app.exception_handler(500)
-async def server_error_handler(request: Request, exc):
+@app.get("/{full_path:path}")
+async def serve_spa(full_path: str):
     """
-    Handler per errori 500 (errore interno).
+    Serve la Single Page Application Svelte.
 
-    Mostra una pagina user-friendly con istruzioni per l'utente.
+    Tutte le route vengono gestite dal router Svelte lato client.
+    Questo catch-all deve essere l'ultimo route handler.
     """
-    return templates.TemplateResponse(
-        "errors/500.html",
-        {"request": request},
-        status_code=500
-    )
+    # Serve static files from frontend build if they exist
+    if full_path:
+        static_file = FRONTEND_DIR / full_path
+        if static_file.exists() and static_file.is_file():
+            return FileResponse(static_file)
+
+    # Default: serve index.html for SPA routing
+    index_path = FRONTEND_DIR / "index.html"
+    if index_path.exists():
+        return FileResponse(index_path)
+
+    # Fallback if frontend not built
+    return {"error": "Frontend not built. Run 'npm run build' in frontend/"}
