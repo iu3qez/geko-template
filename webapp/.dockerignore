@@ -47,3 +47,6 @@ data/
 dist/
 build/
 *.egg-info
+
+# Typst directory (template.typ is mounted as volume)
+typst/template.typ

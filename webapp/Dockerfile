@@ -73,7 +73,9 @@ RUN pip install --no-cache /wheels/*
 COPY --chown=geko:geko . .
 
 # Crea directory dati con permessi corretti
+# Nota: creiamo un file vuoto per template.typ così Docker può montare un file sopra
 RUN mkdir -p /app/data/articles /app/data/images /app/data/output /app/typst/generated \
+    && touch /app/typst/template.typ \
     && chown -R geko:geko /app/data /app/typst
 
 # Copia template Typst dalla directory parent (se presente)
