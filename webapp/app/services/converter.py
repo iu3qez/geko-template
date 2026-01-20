@@ -119,7 +119,7 @@ class MarkdownToTypstConverter:
 
         # Subtitle
         if sottotitolo:
-            parts.append(f'#sottotitolo[{sottotitolo}]')
+            parts.append(f'#sottotitolo-sezione[{sottotitolo}]')
 
         # Author
         if autore:

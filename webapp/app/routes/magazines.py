@@ -331,9 +331,16 @@ async def build_magazine_pdf(
         import traceback
         print(f"ERRORE BUILD PDF: {str(e)}")
         print(traceback.format_exc())
-        raise HTTPException(
-            status_code=500,
-            detail=f"Errore durante la generazione del PDF: {str(e)}"
+
+        # Ritorna HTML con errore per HTMX invece di HTTPException
+        templates = request.app.state.templates
+        return templates.TemplateResponse(
+            "standard/magazines/build_error.html",
+            {
+                "request": request,
+                "error": str(e),
+            },
+            status_code=200,  # HTMX ignora risposte non-2xx per default
         )
 
 
