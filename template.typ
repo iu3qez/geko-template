@@ -1,17 +1,19 @@
 // GEKO Radio Magazine Template
 // Mountain QRP Club - Replica fedele del layout originale
+// Versione 2.0 - Migliorata
 
 // ============================================
-// COLORI
+// COLORI ESATTI DALLA RIVISTA
 // ============================================
 
-#let geko-gold = rgb("#C4A35A")      // Oro per titoli, box pagina, bordi
-#let geko-magenta = rgb("#C7338C")   // Magenta per sottotitoli, link, evidenze
-#let geko-dark = rgb("#333333")      // Testo principale
-#let geko-light = rgb("#F5F5F5")     // Sfondo tabelle alternate
+#let geko-gold = rgb("#C4A35A")      // Oro per box pagina, bordi, titolo SOMMARIO
+#let geko-magenta = rgb("#C7338C")   // Magenta per IN EVIDENZA, titoli articoli, link
+#let geko-dark = rgb("#333333")      // Testo principale scuro
+#let geko-light = rgb("#F8F8F8")     // Sfondo chiaro per tabelle alternate
+#let geko-white = rgb("#FFFFFF")     // Bianco
 
 // ============================================
-// NUMERO PAGINA (box dorato in alto a destra)
+// FUNZIONE: Box numero pagina (angolo alto destra)
 // ============================================
 
 #let page-number-box() = {
@@ -19,64 +21,63 @@
     let page-num = counter(page).get().first()
     box(
       fill: geko-gold,
-      inset: (x: 10pt, y: 5pt),
-      radius: 3pt,
-      text(fill: white, weight: "bold", size: 11pt)[#page-num]
+      inset: (x: 8pt, y: 4pt),
+      radius: 2pt,
+      text(fill: white, weight: "bold", size: 10pt)[#page-num]
     )
   }
 }
 
 // ============================================
-// TITOLO ARTICOLO (maiuscolo, magenta, linea oro sotto)
+// FUNZIONE: Titolo articolo principale
+// (maiuscolo, magenta, linea oro sotto)
 // ============================================
 
 #let titolo-articolo(testo) = {
-  v(0.8em)
-  text(size: 18pt, weight: "bold", fill: geko-magenta, upper(testo))
-  v(0.3em)
-  line(length: 100%, stroke: 2pt + geko-gold)
+  v(1em)
+  block(width: 100%)[
+    #text(size: 16pt, weight: "bold", fill: geko-magenta, tracking: 0.5pt)[#upper(testo)]
+    #v(4pt)
+    #line(length: 100%, stroke: 2pt + geko-gold)
+  ]
   v(0.8em)
 }
 
 // ============================================
-// SOTTOTITOLO SEZIONE (magenta, corsivo)
+// FUNZIONE: Sottotitolo di sezione
 // ============================================
 
-#let sottotitolo(testo) = {
-  v(0.5em)
-  text(size: 12pt, style: "italic", fill: geko-magenta, testo)
-  v(0.5em)
+#let sottotitolo-sezione(testo) = {
+  v(0.6em)
+  text(size: 12pt, weight: "bold", fill: geko-magenta)[#upper(testo)]
+  v(0.4em)
 }
 
 // ============================================
-// AUTORE
+// FUNZIONE: Autore articolo
 // ============================================
 
 #let autore(nominativo, nome: none) = {
-  v(0.3em)
+  v(0.2em)
   if nome != none {
-    text(size: 10pt, weight: "bold")[#nome #nominativo]
+    text(size: 10pt, style: "italic")[#nome #nominativo]
   } else {
-    text(size: 10pt, weight: "bold")[#nominativo]
+    text(size: 10pt, style: "italic")[#nominativo]
   }
-  v(0.8em)
+  v(0.6em)
 }
 
 // ============================================
-// FIGURA CON DIDASCALIA
+// FUNZIONE: Link stilizzato (magenta)
 // ============================================
 
-#let figura(path, didascalia: none, width: 100%) = {
-  figure(
-    image(path, width: width),
-    caption: if didascalia != none { text(size: 9pt, didascalia) },
-    supplement: none,
-    numbering: none,
-  )
+#let link-geko(url, testo: none) = {
+  let display = if testo != none { testo } else { url }
+  link(url, text(fill: geko-magenta)[#display])
 }
 
 // ============================================
-// BOX EVIDENZA (sfondo grigio, bordo oro)
+// FUNZIONE: Box evidenza (sfondo grigio, bordo oro)
 // ============================================
 
 #let box-evidenza(titolo: none, contenuto) = {
@@ -84,12 +85,12 @@
     width: 100%,
     fill: geko-light,
     inset: 12pt,
-    radius: 4pt,
+    radius: 3pt,
     stroke: 0.5pt + geko-gold,
     [
       #if titolo != none {
-        text(weight: "bold", fill: geko-magenta, size: 11pt, titolo)
-        v(0.5em)
+        text(weight: "bold", fill: geko-magenta, size: 11pt)[#titolo]
+        v(0.4em)
       }
       #contenuto
     ]
@@ -97,112 +98,113 @@
 }
 
 // ============================================
-// TABELLA STILE GEKO (header oro, righe alternate)
+// FUNZIONE: Tabella stile GEKO
+// (header oro, righe alternate)
 // ============================================
 
 #let tabella-geko(intestazioni, righe) = {
   table(
     columns: intestazioni.len(),
-    fill: (col, row) => if row == 0 { geko-gold } else if calc.odd(row) { geko-light } else { white },
-    stroke: 0.5pt + geko-dark.lighten(50%),
-    inset: 8pt,
+    fill: (col, row) => {
+      if row == 0 { geko-gold }
+      else if calc.odd(row) { geko-light }
+      else { white }
+    },
+    stroke: 0.5pt + geko-dark.lighten(60%),
+    inset: 6pt,
     align: (col, row) => if row == 0 { center } else { left },
-    ..intestazioni.map(h => text(fill: white, weight: "bold", size: 9pt, h)),
-    ..righe.flatten().map(c => text(size: 9pt, c))
+    ..intestazioni.map(h => text(fill: white, weight: "bold", size: 9pt)[#h]),
+    ..righe.flatten().map(c => text(size: 9pt)[#c])
   )
 }
 
 // ============================================
-// LINK STILIZZATO (magenta)
-// ============================================
-
-#let link-geko(url, testo: none) = {
-  let display = if testo != none { testo } else { url }
-  link(url, text(fill: geko-magenta, display))
-}
-
-// ============================================
-// SEPARATORE ARTICOLI
+// FUNZIONE: Separatore articoli
 // ============================================
 
 #let separatore() = {
-  v(1em)
-  line(length: 100%, stroke: 0.5pt + geko-gold.lighten(50%))
-  v(1em)
+  v(0.8em)
+  line(length: 100%, stroke: 0.5pt + geko-gold.lighten(40%))
+  v(0.8em)
 }
 
 // ============================================
 // COPERTINA (Pagina 1)
-// Layout: 2 colonne - sinistra immagine+editoriale, destra IN EVIDENZA
+// Layout: 2 colonne
+// - Sinistra: immagine principale + editoriale
+// - Destra: Nr./data + IN EVIDENZA + lista articoli
 // ============================================
 
 #let copertina(
-  numero: "XX",
-  mese: "Mese",
+  numero: "66",
+  mese: "Agosto",
   anno: "2025",
   immagine-principale: none,
   evidenze: (),
   editoriale-testo: none,
   editoriale-autore: none,
 ) = {
+  // Pagina senza header/footer
   set page(
     paper: "a4",
-    margin: (top: 1.2cm, bottom: 1.2cm, left: 1.5cm, right: 1.5cm),
+    margin: (top: 1.2cm, bottom: 1.5cm, left: 1.5cm, right: 1.5cm),
     header: none,
     footer: none,
   )
-
+  
+  // Grid a due colonne: sinistra più larga
   grid(
-    columns: (1.6fr, 1fr),
-    gutter: 1.5em,
+    columns: (1.5fr, 1fr),
+    gutter: 1.2em,
 
     // === COLONNA SINISTRA ===
     [
-      // Immagine principale con bordo
+      // Immagine principale con bordo dorato
       #if immagine-principale != none {
         box(
-          stroke: 3pt + geko-gold.darken(10%),
+          stroke: 3pt + geko-gold.darken(15%),
           radius: 0pt,
           clip: true,
           image(immagine-principale, width: 100%)
         )
       }
 
-      #v(1em)
+      #v(1.2em)
 
-      // Box EDITORIALE
+      // Box EDITORIALE con bordo sinistro dorato
       #block(
         width: 100%,
         stroke: (left: 4pt + geko-gold),
-        inset: (left: 12pt, y: 8pt, right: 4pt),
+        inset: (left: 12pt, top: 8pt, bottom: 8pt, right: 4pt),
         [
-          #text(size: 16pt, weight: "bold", fill: geko-gold)[EDITORIALE]
-          #v(0.6em)
+          #text(size: 14pt, weight: "bold", fill: geko-gold)[EDITORIALE]
+          #v(0.5em)
 
-          #set text(size: 9pt)
-          #set par(justify: true, leading: 0.52em)
+          #set text(size: 9pt, fill: geko-dark)
+          #set par(justify: true, leading: 0.55em)
           #editoriale-testo
 
-          #v(0.5em)
-          #text(size: 9pt, weight: "bold")[#editoriale-autore]
+          #v(0.6em)
+          #text(size: 9pt, weight: "bold", fill: geko-dark)[#editoriale-autore]
         ]
       )
     ],
 
     // === COLONNA DESTRA ===
     [
-      // Header numero/mese
+      // Header: numero e data
       #align(right)[
         #text(size: 10pt, fill: geko-dark)[Nr. #numero | #mese – #anno]
       ]
-      #v(0.8em)
+      #v(1em)
 
-      // Titolo IN EVIDENZA (box magenta)
+      // Titolo "IN EVIDENZA" in box magenta
       #align(right)[
         #box(
           fill: geko-magenta,
-          inset: (x: 15pt, y: 8pt),
-          text(size: 22pt, weight: "bold", fill: white)[IN EVIDENZA]
+          inset: (x: 14pt, y: 8pt),
+          radius: 0pt,
+          text(size: 20pt, weight: "bold", fill: white, tracking: 1pt)[IN EVIDENZA]
         )
       ]
 
@@ -210,12 +212,12 @@
 
       // Lista evidenze
       #for ev in evidenze {
-        block(width: 100%, below: 1.2em)[
-          // Titolo evidenza in magenta
-          #text(size: 11pt, weight: "bold", fill: geko-magenta)[#ev.titolo:]
-          #v(0.3em)
+        block(width: 100%, below: 1em)[
+          // Titolo evidenza in magenta bold
+          #text(size: 10pt, weight: "bold", fill: geko-magenta)[#upper(ev.titolo):]
+          #v(0.25em)
           // Descrizione
-          #set text(size: 9pt)
+          #set text(size: 9pt, fill: geko-dark)
           #set par(justify: true, leading: 0.5em)
           #ev.descrizione
         ]
@@ -228,19 +230,19 @@
 
 // ============================================
 // PAGINA LOGO (Pagina 2)
-// Grande immagine centrata + sottotitolo magenta
+// Logo grande centrato + sottotitolo
 // ============================================
 
 #let pagina-logo(
   numero: "66",
   mese: "Agosto",
   anno: "2025",
-  logo-grande: none,
-  sottotitolo: "Il GEKO RADIO MAGAZINE – Rivista aperiodica del Mountain QRP Club.",
+  logo-rivista: none,
+  sottotitolo-testo: "Il GEKO RADIO MAGAZINE – Rivista aperiodica del Mountain QRP Club.",
 ) = {
   set page(
     paper: "a4",
-    margin: (top: 1.5cm, bottom: 2cm, left: 2cm, right: 2cm),
+    margin: (top: 2cm, bottom: 2cm, left: 2cm, right: 2cm),
     header: align(right)[#page-number-box()],
     footer: align(center)[
       #text(size: 9pt, fill: geko-dark)[Geko Radio Magazine – Nr. #numero | #mese - #anno]
@@ -250,16 +252,13 @@
   v(1fr)
 
   align(center)[
-    #if logo-grande != none {
-      box(
-        stroke: 1pt + geko-dark.lighten(70%),
-        image(logo-grande, width: 85%)
-      )
+    #if logo-rivista != none {
+      image(logo-rivista, width: 75%)
     }
 
     #v(1.5em)
 
-    #text(size: 13pt, style: "italic", weight: "bold", fill: geko-magenta)[#sottotitolo]
+    #text(size: 12pt, style: "italic", weight: "bold", fill: geko-magenta)[#sottotitolo-testo]
   ]
 
   v(2fr)
@@ -269,7 +268,7 @@
 
 // ============================================
 // SOMMARIO (Pagina 3)
-// Titolo dorato maiuscolo + outline
+// Titolo dorato + outline personalizzato
 // ============================================
 
 #let sommario(numero: "66", mese: "Agosto", anno: "2025") = {
@@ -282,30 +281,21 @@
     ],
   )
 
-  text(size: 24pt, weight: "bold", fill: geko-gold)[SOMMARIO]
-  v(0.3em)
+  // Titolo SOMMARIO
+  text(size: 22pt, weight: "bold", fill: geko-gold, tracking: 1pt)[SOMMARIO]
+  v(3pt)
   line(length: 100%, stroke: 2pt + geko-gold)
-  v(1em)
+  v(1.2em)
 
-  // Stile outline personalizzato
+  // Stile outline - usa lo stile predefinito con personalizzazione minima
   show outline.entry.where(level: 1): it => {
     v(0.3em)
-    text(weight: "bold", size: 11pt)[#it.body()]
-    box(width: 1fr, repeat[.])
-    text(weight: "bold")[#it.page()]
-    v(0.2em)
-  }
-
-  show outline.entry.where(level: 2): it => {
-    h(1.5em)
-    text(size: 10pt)[#it.body()]
-    box(width: 1fr, repeat[ .])
-    it.page()
+    strong(it)
   }
 
   outline(
     title: none,
-    indent: 0em,
+    indent: auto,
     depth: 2,
   )
 
@@ -314,7 +304,7 @@
 
 // ============================================
 // SETUP DOCUMENTO PRINCIPALE
-// Da usare per il contenuto articoli
+// Usare per impaginare gli articoli
 // ============================================
 
 #let geko-magazine(
@@ -323,23 +313,25 @@
   anno: "2025",
   contenuto
 ) = {
+  // Metadata documento
   set document(
     title: "Geko Radio Magazine - Nr. " + numero,
     author: "Mountain QRP Club",
   )
 
+  // Impostazioni pagina standard per articoli
   set page(
     paper: "a4",
-    margin: (top: 2.5cm, bottom: 2.5cm, left: 2cm, right: 2cm),
+    margin: (top: 2.5cm, bottom: 2cm, left: 2cm, right: 2cm),
     header: {
       grid(
         columns: (1fr, auto),
         align(left + horizon)[
           #text(size: 9pt, fill: geko-dark)[Geko Radio Magazine – Nr. #numero | #mese - #anno]
         ],
-        align(right)[#page-number-box()]
+        align(right + horizon)[#page-number-box()]
       )
-      v(-0.3em)
+      v(-0.2em)
       line(length: 100%, stroke: 0.5pt + geko-gold)
     },
     footer: align(center)[
@@ -347,9 +339,9 @@
     ],
   )
 
-  // Font Linux Libertine come originale
+  // Font principale (Latin Modern Roman simile a Libertine)
   set text(
-    font: "Linux Libertine",
+    font: ("Latin Modern Roman", "DejaVu Serif", "FreeSerif"),
     size: 10pt,
     lang: "it",
     fill: geko-dark,
@@ -362,33 +354,118 @@
     first-line-indent: 0em,
   )
 
-  // Stili heading
+  // Heading senza numerazione
   set heading(numbering: none)
 
-  // H1 = Titolo articolo (maiuscolo magenta + linea oro)
+  // H1 = Titolo articolo principale (inizia a pagina nuova)
   show heading.where(level: 1): it => {
+    pagebreak(weak: true)
     titolo-articolo(it.body)
   }
 
-  // H2 = Sezione (magenta corsivo)
+  // H2 = Sottosezione (maiuscolo magenta)
   show heading.where(level: 2): it => {
     v(0.8em)
-    text(size: 13pt, style: "italic", fill: geko-magenta, it.body)
+    text(size: 12pt, weight: "bold", fill: geko-magenta)[#upper(it.body)]
     v(0.4em)
   }
 
-  // H3 = Sottosezione
+  // H3 = Sotto-sottosezione
   show heading.where(level: 3): it => {
     v(0.5em)
-    text(size: 11pt, weight: "bold", fill: geko-dark, it.body)
+    text(size: 11pt, weight: "bold", fill: geko-dark)[#it.body]
     v(0.3em)
   }
 
   // Link in magenta
-  show link: it => text(fill: geko-magenta, it)
+  show link: it => text(fill: geko-magenta)[#it]
 
-  // Liste puntate
-  set list(marker: text(fill: geko-gold)[•])
+  // Liste puntate con bullet dorato
+  set list(marker: text(fill: geko-gold, size: 8pt)[●])
+
+  // Liste numerate
+  set enum(numbering: "1.")
 
   contenuto
 }
+
+// ============================================
+// PAGINA TEAM MQC
+// Per la pagina finale con i membri del team
+// ============================================
+
+#let pagina-team(
+  membri: (),
+) = {
+  titolo-articolo("MQC TEAM")
+  
+  // Grid per i membri (3 colonne)
+  if membri.len() > 0 {
+    let cols = 3
+    grid(
+      columns: (1fr,) * cols,
+      gutter: 1em,
+      ..membri.map(m => {
+        align(center)[
+          #if m.at("foto", default: none) != none {
+            image(m.foto, width: 80%)
+          }
+          #v(0.3em)
+          #text(weight: "bold", size: 10pt, fill: geko-magenta)[#m.nominativo #m.nome]
+          #v(0.1em)
+          #text(size: 9pt)[#m.ruolo]
+        ]
+      })
+    )
+  }
+}
+
+// ============================================
+// PAGINA BENVENUTO NUOVI SOCI
+// ============================================
+
+#let benvenuto-soci(
+  soci: (),
+  totale: 0,
+) = {
+  titolo-articolo("Un benvenuto a…")
+  
+  text(size: 10pt)[Ecco i nostri nuovi soci:]
+  v(0.5em)
+  
+  // Tabella soci (5 colonne)
+  if soci.len() > 0 {
+    let cols = 5
+    let rows = calc.ceil(soci.len() / cols)
+    
+    table(
+      columns: (1fr,) * cols,
+      stroke: 0.5pt + geko-dark.lighten(70%),
+      inset: 4pt,
+      ..soci.map(s => text(size: 8pt)[#s])
+    )
+  }
+  
+  v(0.5em)
+  text(size: 11pt, weight: "bold")[E siamo #totale!]
+}
+
+// ============================================
+// FIGURE CON DIDASCALIA
+// ============================================
+
+#let figura(percorso, didascalia: none, larghezza: 100%) = {
+  figure(
+    image(percorso, width: larghezza),
+    caption: if didascalia != none { 
+      text(size: 9pt, style: "italic")[#didascalia] 
+    },
+    supplement: none,
+    numbering: none,
+  )
+}
+
+// ============================================
+// ESPORTAZIONI
+// Tutte le funzioni principali sono disponibili
+// ============================================
