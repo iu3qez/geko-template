@@ -89,18 +89,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /build/wheels /wheels
 RUN pip install --no-cache /wheels/*
 
-# Copia applicazione (escludi frontend sorgenti)
+# Copia applicazione
 COPY --chown=geko:geko app/ ./app/
-COPY --chown=geko:geko static/ ./static/
 
 # Copia frontend build output
 COPY --from=frontend --chown=geko:geko /frontend/build ./frontend/build
 
+# Crea directory static vuota (per compatibilità)
+RUN mkdir -p /app/static && chown geko:geko /app/static
+
 # Crea directory dati con permessi corretti
 # Nota: creiamo un file vuoto per template.typ così Docker può montare un file sopra
-RUN mkdir -p /app/data/articles /app/data/images /app/data/output /app/typst/generated \
+RUN mkdir -p /app/data/uploads /app/data/images /app/data/output /app/typst/generated \
     && touch /app/typst/template.typ \
-    && chown -R geko:geko /app/data /app/typst
+    && chown -R geko:geko /app/data /app/typst /app/frontend
 
 # Copia template Typst dalla directory parent (se presente)
 # Nota: in produzione, montare come volume o copiare durante build
