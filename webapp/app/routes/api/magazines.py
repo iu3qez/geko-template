@@ -332,6 +332,34 @@ async def download_pdf(magazine_id: int, db: AsyncSession = Depends(get_db)):
     )
 
 
+@router.post("/{magazine_id}/articles/reorder")
+async def reorder_articles(
+    magazine_id: int,
+    data: ReorderRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """Reorder articles in a magazine."""
+    query = select(Magazine).where(Magazine.id == magazine_id)
+    result = await db.execute(query)
+    magazine = result.scalar_one_or_none()
+
+    if not magazine:
+        raise HTTPException(status_code=404, detail="Magazine not found")
+
+    # Update order for each article
+    for idx, article_id in enumerate(data.article_ids):
+        await db.execute(
+            article_magazines.update()
+            .where(article_magazines.c.article_id == article_id)
+            .where(article_magazines.c.magazine_id == magazine_id)
+            .values(ordine=idx)
+        )
+
+    await db.commit()
+
+    return {"status": "reordered"}
+
+
 @router.post("/{magazine_id}/articles/{article_id}")
 async def add_article(
     magazine_id: int,
@@ -404,31 +432,3 @@ async def remove_article(
     await db.commit()
 
     return {"status": "removed"}
-
-
-@router.post("/{magazine_id}/articles/reorder")
-async def reorder_articles(
-    magazine_id: int,
-    data: ReorderRequest,
-    db: AsyncSession = Depends(get_db)
-):
-    """Reorder articles in a magazine."""
-    query = select(Magazine).where(Magazine.id == magazine_id)
-    result = await db.execute(query)
-    magazine = result.scalar_one_or_none()
-
-    if not magazine:
-        raise HTTPException(status_code=404, detail="Magazine not found")
-
-    # Update order for each article
-    for idx, article_id in enumerate(data.article_ids):
-        await db.execute(
-            article_magazines.update()
-            .where(article_magazines.c.article_id == article_id)
-            .where(article_magazines.c.magazine_id == magazine_id)
-            .values(ordine=idx)
-        )
-
-    await db.commit()
-
-    return {"status": "reordered"}
