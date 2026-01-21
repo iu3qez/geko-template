@@ -4,11 +4,11 @@
 	import { goto } from '$app/navigation';
 	import {
 		ArrowLeft, Edit, Download, FileText, Plus, Trash2,
-		GripVertical, CheckCircle, AlertCircle, Loader
+		GripVertical, CheckCircle, AlertCircle, Loader, Image as ImageIcon
 	} from 'lucide-svelte';
 	import { Button, Badge, Card, Loading, Modal, Input, Textarea, Select } from '$lib/components/ui';
-	import { magazines, articles as articlesApi } from '$lib/api';
-	import type { Magazine, Article } from '$lib/api';
+	import { magazines, articles as articlesApi, images as imagesApi } from '$lib/api';
+	import type { Magazine, Article, Image } from '$lib/api';
 
 	const magazineId = $derived(parseInt($page.params.id));
 
@@ -25,7 +25,8 @@
 		anno: '',
 		stato: 'bozza',
 		editoriale: '',
-		editoriale_autore: ''
+		editoriale_autore: '',
+		copertina_id: null as number | null
 	});
 	let saving = $state(false);
 
@@ -41,6 +42,11 @@
 	// Delete confirmation
 	let deleteModal = $state(false);
 	let deleting = $state(false);
+
+	// Cover image selection
+	let coverModal = $state(false);
+	let availableImages = $state<Image[]>([]);
+	let loadingImages = $state(false);
 
 	const mesi = [
 		'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
@@ -67,7 +73,8 @@
 				anno: mag.anno,
 				stato: mag.stato,
 				editoriale: mag.editoriale,
-				editoriale_autore: mag.editoriale_autore
+				editoriale_autore: mag.editoriale_autore,
+				copertina_id: mag.copertina_id
 			};
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Errore nel caricamento';
@@ -151,6 +158,27 @@
 		}
 	}
 
+	async function openCoverModal() {
+		coverModal = true;
+		loadingImages = true;
+		try {
+			availableImages = await imagesApi.list();
+		} catch (e) {
+			console.error('Error loading images:', e);
+		} finally {
+			loadingImages = false;
+		}
+	}
+
+	function selectCover(image: Image | null) {
+		editData.copertina_id = image?.id ?? null;
+		coverModal = false;
+	}
+
+	const selectedCoverImage = $derived(
+		availableImages.find(img => img.id === editData.copertina_id) || magazine?.copertina
+	);
+
 	const availableArticles = $derived(
 		allArticles.filter(a => !magazine?.articles.some(ma => ma.id === a.id))
 	);
@@ -228,6 +256,32 @@
 								label="Autore Editoriale"
 								bind:value={editData.editoriale_autore}
 							/>
+
+							<div class="cover-selector">
+								<label class="cover-label">Immagine Prima Pagina</label>
+								<div class="cover-preview-container">
+									{#if selectedCoverImage}
+										<div class="cover-preview">
+											<img src={selectedCoverImage.url} alt="Copertina selezionata" />
+										</div>
+									{:else}
+										<div class="cover-placeholder">
+											<ImageIcon size={32} />
+											<span>Nessuna immagine</span>
+										</div>
+									{/if}
+									<div class="cover-actions">
+										<Button type="button" variant="outline" size="sm" onclick={openCoverModal}>
+											{selectedCoverImage ? 'Cambia' : 'Seleziona'}
+										</Button>
+										{#if selectedCoverImage}
+											<Button type="button" variant="ghost" size="sm" onclick={() => editData.copertina_id = null}>
+												Rimuovi
+											</Button>
+										{/if}
+									</div>
+								</div>
+							</div>
 
 							<div class="form-actions">
 								<Button variant="ghost" onclick={() => editing = false}>
@@ -388,6 +442,34 @@
 		</Button>
 		<Button variant="danger" onclick={handleDelete} loading={deleting}>
 			Elimina
+		</Button>
+	{/snippet}
+</Modal>
+
+<Modal bind:open={coverModal} title="Seleziona Immagine Prima Pagina" size="lg">
+	{#if loadingImages}
+		<Loading text="Caricamento immagini..." />
+	{:else if availableImages.length === 0}
+		<p>Non ci sono immagini disponibili. <a href="/media">Carica delle immagini</a> prima.</p>
+	{:else}
+		<div class="image-grid">
+			{#each availableImages as image}
+				<button
+					type="button"
+					class="image-option"
+					class:selected={editData.copertina_id === image.id}
+					onclick={() => selectCover(image)}
+				>
+					<img src={image.url} alt={image.alt_text || image.original_filename} />
+					<span class="image-name">{image.original_filename}</span>
+				</button>
+			{/each}
+		</div>
+	{/if}
+
+	{#snippet footer()}
+		<Button variant="ghost" onclick={() => coverModal = false}>
+			Annulla
 		</Button>
 	{/snippet}
 </Modal>
@@ -589,6 +671,104 @@
 	.warning-text {
 		color: var(--color-danger);
 		font-size: var(--text-sm);
+	}
+
+	/* Cover selector */
+	.cover-selector {
+		margin-top: var(--space-4);
+	}
+
+	.cover-label {
+		display: block;
+		font-size: var(--text-sm);
+		font-weight: 500;
+		color: var(--geko-dark);
+		margin-bottom: var(--space-2);
+	}
+
+	.cover-preview-container {
+		display: flex;
+		align-items: flex-start;
+		gap: var(--space-4);
+	}
+
+	.cover-preview {
+		width: 120px;
+		height: 160px;
+		border-radius: var(--radius-md);
+		overflow: hidden;
+		border: 2px solid var(--geko-gold);
+	}
+
+	.cover-preview img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.cover-placeholder {
+		width: 120px;
+		height: 160px;
+		border-radius: var(--radius-md);
+		border: 2px dashed var(--geko-gray-light);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: var(--space-2);
+		color: var(--geko-gray);
+		font-size: var(--text-sm);
+	}
+
+	.cover-actions {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+	}
+
+	/* Image grid in modal */
+	.image-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+		gap: var(--space-3);
+		max-height: 400px;
+		overflow-y: auto;
+	}
+
+	.image-option {
+		background: none;
+		border: 2px solid transparent;
+		border-radius: var(--radius-md);
+		padding: var(--space-2);
+		cursor: pointer;
+		transition: all var(--transition-fast);
+		text-align: center;
+	}
+
+	.image-option:hover {
+		border-color: var(--geko-gray-light);
+	}
+
+	.image-option.selected {
+		border-color: var(--geko-gold);
+		background: rgba(196, 163, 90, 0.1);
+	}
+
+	.image-option img {
+		width: 100%;
+		aspect-ratio: 3/4;
+		object-fit: cover;
+		border-radius: var(--radius-sm);
+	}
+
+	.image-option .image-name {
+		display: block;
+		font-size: var(--text-xs);
+		color: var(--geko-gray);
+		margin-top: var(--space-1);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	@media (max-width: 768px) {
