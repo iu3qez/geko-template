@@ -236,6 +236,7 @@ async def delete_magazine(magazine_id: int, db: AsyncSession = Depends(get_db)):
 async def build_pdf(magazine_id: int, db: AsyncSession = Depends(get_db)):
     """Build PDF for a magazine."""
     from ...services.builder import build_magazine_pdf
+    from ...services.converter import convert_markdown_to_typst
 
     query = select(Magazine).options(
         selectinload(Magazine.articles).selectinload(Article.images),
@@ -253,10 +254,17 @@ async def build_pdf(magazine_id: int, db: AsyncSession = Depends(get_db)):
 
     try:
         # Prepare articles typst content
-        articles_typst = [
-            article.contenuto_typ or article.contenuto_md or ""
-            for article in magazine.articles
-        ]
+        # If contenuto_typ exists, use it; otherwise convert markdown to typst
+        articles_typst = []
+        for article in magazine.articles:
+            if article.contenuto_typ:
+                articles_typst.append(article.contenuto_typ)
+            elif article.contenuto_md:
+                # Convert markdown to typst on-the-fly
+                converted = convert_markdown_to_typst(article.contenuto_md)
+                articles_typst.append(converted)
+            else:
+                articles_typst.append("")
 
         # Build evidenze (highlights) from article summaries
         evidenze = [

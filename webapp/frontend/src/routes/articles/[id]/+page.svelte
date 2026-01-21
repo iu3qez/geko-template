@@ -8,6 +8,13 @@
 	import { Button, Input, Textarea, Card, Badge, Loading, Modal } from '$lib/components/ui';
 	import { articles, magazines as magazinesApi } from '$lib/api';
 	import type { Article, Magazine } from '$lib/api';
+	import { marked } from 'marked';
+
+	// Configure marked for safe HTML
+	marked.setOptions({
+		breaks: true,
+		gfm: true
+	});
 
 	const articleId = $derived(parseInt($page.params.id));
 
@@ -243,8 +250,8 @@
 									{/if}
 								</p>
 							{/if}
-							<div class="preview-body">
-								{@html editData.contenuto_md.split('\n').map(line => `<p>${line || '&nbsp;'}</p>`).join('')}
+							<div class="preview-body markdown-content">
+								{@html marked(editData.contenuto_md || '')}
 							</div>
 						</div>
 					</Card>
@@ -564,6 +571,93 @@
 
 	.preview-body :global(p) {
 		margin-bottom: var(--space-3);
+	}
+
+	/* Markdown rendered content styles */
+	.markdown-content :global(h1),
+	.markdown-content :global(h2),
+	.markdown-content :global(h3),
+	.markdown-content :global(h4) {
+		color: var(--geko-gold);
+		margin-top: var(--space-6);
+		margin-bottom: var(--space-3);
+	}
+
+	.markdown-content :global(h1) { font-size: var(--text-2xl); }
+	.markdown-content :global(h2) { font-size: var(--text-xl); }
+	.markdown-content :global(h3) { font-size: var(--text-lg); }
+
+	.markdown-content :global(ul),
+	.markdown-content :global(ol) {
+		margin-left: var(--space-6);
+		margin-bottom: var(--space-4);
+	}
+
+	.markdown-content :global(li) {
+		margin-bottom: var(--space-2);
+	}
+
+	.markdown-content :global(blockquote) {
+		border-left: 4px solid var(--geko-gold);
+		padding-left: var(--space-4);
+		margin: var(--space-4) 0;
+		font-style: italic;
+		color: var(--geko-gray);
+	}
+
+	.markdown-content :global(code) {
+		background: var(--geko-dark);
+		color: var(--geko-gold);
+		padding: 0.2em 0.4em;
+		border-radius: 4px;
+		font-size: 0.9em;
+	}
+
+	.markdown-content :global(pre) {
+		background: var(--geko-dark);
+		padding: var(--space-4);
+		border-radius: var(--radius-md);
+		overflow-x: auto;
+		margin-bottom: var(--space-4);
+	}
+
+	.markdown-content :global(pre code) {
+		background: none;
+		padding: 0;
+	}
+
+	.markdown-content :global(strong) {
+		color: var(--geko-magenta);
+	}
+
+	.markdown-content :global(a) {
+		color: var(--geko-magenta);
+		text-decoration: underline;
+	}
+
+	.markdown-content :global(img) {
+		max-width: 100%;
+		height: auto;
+		border-radius: var(--radius-md);
+		margin: var(--space-4) 0;
+	}
+
+	.markdown-content :global(table) {
+		width: 100%;
+		border-collapse: collapse;
+		margin-bottom: var(--space-4);
+	}
+
+	.markdown-content :global(th),
+	.markdown-content :global(td) {
+		border: 1px solid var(--geko-gray);
+		padding: var(--space-2) var(--space-3);
+		text-align: left;
+	}
+
+	.markdown-content :global(th) {
+		background: var(--geko-gold);
+		color: white;
 	}
 
 	.assign-hint {

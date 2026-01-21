@@ -24,7 +24,8 @@
     "@tiptap/extension-placeholder": "^2.0.0",
     "@tiptap/pm": "^2.0.0",
     "@tiptap/starter-kit": "^2.0.0",
-    "lucide-svelte": "^0.460.0"
+    "lucide-svelte": "^0.460.0",
+    "marked": "^12.0.0"
   },
   "type": "module"
 }

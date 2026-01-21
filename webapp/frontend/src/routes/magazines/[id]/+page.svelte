@@ -4,7 +4,7 @@
 	import { goto } from '$app/navigation';
 	import {
 		ArrowLeft, Edit, Download, FileText, Plus, Trash2,
-		GripVertical, CheckCircle, AlertCircle, Loader, Image as ImageIcon
+		ChevronUp, ChevronDown, CheckCircle, AlertCircle, Loader, Image as ImageIcon
 	} from 'lucide-svelte';
 	import { Button, Badge, Card, Loading, Modal, Input, Textarea, Select } from '$lib/components/ui';
 	import { magazines, articles as articlesApi, images as imagesApi } from '$lib/api';
@@ -141,6 +141,26 @@
 			await loadMagazine();
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Errore';
+		}
+	}
+
+	async function handleMoveArticle(index: number, direction: 'up' | 'down') {
+		if (!magazine) return;
+
+		const articles = [...magazine.articles];
+		const newIndex = direction === 'up' ? index - 1 : index + 1;
+
+		// Swap articles
+		[articles[index], articles[newIndex]] = [articles[newIndex], articles[index]];
+
+		// Get new order of IDs
+		const articleIds = articles.map(a => a.id);
+
+		try {
+			await magazines.reorderArticles(magazine.id, articleIds);
+			await loadMagazine();
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Errore nel riordino';
 		}
 	}
 
@@ -370,8 +390,23 @@
 						<ul class="articles-list">
 							{#each magazine.articles as article, idx}
 								<li class="article-item">
-									<div class="article-drag">
-										<GripVertical size={16} />
+									<div class="article-reorder">
+										<button
+											class="reorder-btn"
+											onclick={() => handleMoveArticle(idx, 'up')}
+											disabled={idx === 0}
+											aria-label="Sposta su"
+										>
+											<ChevronUp size={16} />
+										</button>
+										<button
+											class="reorder-btn"
+											onclick={() => handleMoveArticle(idx, 'down')}
+											disabled={idx === magazine.articles.length - 1}
+											aria-label="Sposta giù"
+										>
+											<ChevronDown size={16} />
+										</button>
 									</div>
 									<span class="article-order">{idx + 1}</span>
 									<a href="/articles/{article.id}" class="article-info">
@@ -602,9 +637,36 @@
 		border-bottom: none;
 	}
 
-	.article-drag {
-		color: var(--geko-gray-light);
-		cursor: grab;
+	.article-reorder {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.reorder-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 24px;
+		height: 18px;
+		padding: 0;
+		background: transparent;
+		border: 1px solid var(--geko-gray-light);
+		border-radius: 3px;
+		color: var(--geko-gray);
+		cursor: pointer;
+		transition: all 0.15s;
+	}
+
+	.reorder-btn:hover:not(:disabled) {
+		background: var(--geko-gold);
+		border-color: var(--geko-gold);
+		color: white;
+	}
+
+	.reorder-btn:disabled {
+		opacity: 0.3;
+		cursor: not-allowed;
 	}
 
 	.article-order {
