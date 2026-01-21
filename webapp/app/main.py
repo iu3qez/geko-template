@@ -139,12 +139,22 @@ async def health_check():
 # =============================================================================
 
 @app.get("/favicon.png")
+@app.get("/favicon.ico")
 async def favicon():
     """Serve favicon."""
-    favicon_path = FRONTEND_DIR / "favicon.png"
-    if favicon_path.exists():
-        return FileResponse(favicon_path)
-    return FileResponse(STATIC_DIR / "favicon.png")
+    # Try frontend build first
+    for name in ["favicon.png", "favicon.ico"]:
+        favicon_path = FRONTEND_DIR / name
+        if favicon_path.exists():
+            return FileResponse(favicon_path)
+    # Fallback to static dir
+    for name in ["favicon.png", "favicon.ico"]:
+        favicon_path = STATIC_DIR / name
+        if favicon_path.exists():
+            return FileResponse(favicon_path)
+    # No favicon found - return 204 No Content
+    from fastapi.responses import Response
+    return Response(status_code=204)
 
 
 @app.get("/{full_path:path}")
