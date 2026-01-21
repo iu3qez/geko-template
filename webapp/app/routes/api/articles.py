@@ -34,6 +34,7 @@ class ArticleUpdate(BaseModel):
     autore: Optional[str] = None
     nome_autore: Optional[str] = None
     contenuto_md: Optional[str] = None
+    sommario_llm: Optional[str] = None
     ordine: Optional[int] = None
 
 

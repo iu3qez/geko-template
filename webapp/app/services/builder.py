@@ -95,9 +95,9 @@ class MagazineBuilder:
         parts.append('#import "../template.typ": *')
         parts.append('')
 
-        # Cover page (if we have highlights)
-        if evidenze and copertina_path:
-            evidenze_typst = self._format_evidenze(evidenze)
+        # Cover page
+        if copertina_path:
+            evidenze_typst = self._format_evidenze(evidenze) if evidenze else "()"
             parts.append(f'''#copertina(
   numero: "{numero}",
   mese: "{mese}",

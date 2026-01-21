@@ -258,6 +258,16 @@ async def build_pdf(magazine_id: int, db: AsyncSession = Depends(get_db)):
             for article in magazine.articles
         ]
 
+        # Build evidenze (highlights) from article summaries
+        evidenze = [
+            {
+                "titolo": article.titolo,
+                "descrizione": article.sommario_llm or ""
+            }
+            for article in magazine.articles
+            if article.sommario_llm  # Only include articles with AI summaries
+        ]
+
         # Get cover image path if exists
         copertina_path = None
         if magazine.copertina:
@@ -272,6 +282,7 @@ async def build_pdf(magazine_id: int, db: AsyncSession = Depends(get_db)):
             editoriale=magazine.editoriale,
             editoriale_autore=magazine.editoriale_autore,
             copertina_path=copertina_path,
+            evidenze=evidenze,
         )
 
         # Update magazine status

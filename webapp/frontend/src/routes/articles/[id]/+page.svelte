@@ -29,6 +29,9 @@
 
 	// AI summary
 	let generatingSummary = $state(false);
+	let editingSummary = $state(false);
+	let editedSummary = $state('');
+	let savingSummary = $state(false);
 
 	// Assign modal
 	let assignModal = $state(false);
@@ -106,6 +109,25 @@
 			error = e instanceof Error ? e.message : 'Errore generazione sommario';
 		} finally {
 			generatingSummary = false;
+		}
+	}
+
+	function startEditingSummary() {
+		editedSummary = article?.sommario_llm || '';
+		editingSummary = true;
+	}
+
+	async function saveSummary() {
+		if (!article) return;
+
+		savingSummary = true;
+		try {
+			article = await articles.update(article.id, { sommario_llm: editedSummary });
+			editingSummary = false;
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Errore salvataggio sommario';
+		} finally {
+			savingSummary = false;
 		}
 	}
 
@@ -302,14 +324,38 @@
 					{/if}
 				</Card>
 
-				{#if article.sommario_llm}
 					<Card>
-						{#snippet header()}
+					{#snippet header()}
+						<div class="card-header-row">
 							<h3>Sommario AI</h3>
-						{/snippet}
+							{#if article.sommario_llm && !editingSummary}
+								<Button variant="ghost" size="sm" onclick={startEditingSummary}>
+									<EditIcon size={14} />
+									Modifica
+								</Button>
+							{/if}
+						</div>
+					{/snippet}
+					{#if editingSummary}
+						<Textarea
+							bind:value={editedSummary}
+							rows={4}
+							placeholder="Inserisci il sommario..."
+						/>
+						<div class="summary-actions">
+							<Button size="sm" onclick={saveSummary} loading={savingSummary}>
+								Salva
+							</Button>
+							<Button variant="ghost" size="sm" onclick={() => editingSummary = false}>
+								Annulla
+							</Button>
+						</div>
+					{:else if article.sommario_llm}
 						<p class="ai-summary">{article.sommario_llm}</p>
-					</Card>
-				{/if}
+					{:else}
+						<p class="no-summary">Nessun sommario generato</p>
+					{/if}
+				</Card>
 
 				<Card>
 					{#snippet header()}
@@ -471,6 +517,28 @@
 		font-size: var(--text-sm);
 		font-style: italic;
 		color: var(--geko-gray);
+		margin: 0;
+	}
+
+	.no-summary {
+		font-size: var(--text-sm);
+		color: var(--geko-gray-light);
+		margin: 0;
+	}
+
+	.summary-actions {
+		display: flex;
+		gap: var(--space-2);
+		margin-top: var(--space-3);
+	}
+
+	.card-header-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.card-header-row h3 {
 		margin: 0;
 	}
 
