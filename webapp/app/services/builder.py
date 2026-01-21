@@ -98,26 +98,27 @@ class MagazineBuilder:
 
         # Cover page
         if copertina_path:
-            # Path is relative to WEBAPP_DIR root (/app/)
-            # copertina_path is already like "data/uploads/file.png"
+            # Path must be absolute from root (starting with /)
+            # copertina_path is like "data/uploads/file.png", we add "/" prefix
+            abs_copertina = f"/{copertina_path}" if not copertina_path.startswith("/") else copertina_path
             evidenze_typst = self._format_evidenze(evidenze) if evidenze else "()"
             parts.append(f'''#copertina(
   numero: "{numero}",
   mese: "{mese}",
   anno: "{anno}",
-  immagine-principale: "{copertina_path}",
+  immagine-principale: "{abs_copertina}",
   evidenze: {evidenze_typst},
   editoriale-testo: [{editoriale or ""}],
   editoriale-autore: "{editoriale_autore or ""}",
 )''')
             parts.append('')
 
-        # Logo page - path relative to WEBAPP_DIR (/app/)
+        # Logo page - absolute path from root
         parts.append(f'''#pagina-logo(
   numero: "{numero}",
   mese: "{mese}",
   anno: "{anno}",
-  logo-rivista: "typst/assets/logo_rivista.jpg",
+  logo-rivista: "/typst/assets/logo_rivista.jpg",
   sottotitolo-testo: "Il GEKO RADIO MAGAZINE – Rivista aperiodica del Mountain QRP Club.",
 )''')
         parts.append('')
