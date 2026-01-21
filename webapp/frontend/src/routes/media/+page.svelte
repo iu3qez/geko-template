@@ -246,10 +246,13 @@
 			{:else}
 				<div class="images-grid">
 					{#each imagesList as image}
-						<button
+						<div
 							class="image-card"
 							class:selected={selectedImage?.id === image.id}
 							onclick={() => selectImage(image)}
+							onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectImage(image); }}}
+							role="button"
+							tabindex="0"
 						>
 							<div class="image-thumbnail">
 								<img src={image.url} alt={image.alt_text || image.original_filename} loading="lazy" />
@@ -260,7 +263,7 @@
 							<div class="image-actions">
 								<button
 									class="action-btn"
-									onclick|stopPropagation={() => copyMarkdown(image)}
+									onclick={(e) => { e.stopPropagation(); copyMarkdown(image); }}
 									title="Copia Markdown"
 								>
 									{#if copiedId === image.id}
@@ -271,13 +274,13 @@
 								</button>
 								<button
 									class="action-btn danger"
-									onclick|stopPropagation={() => confirmDelete(image)}
+									onclick={(e) => { e.stopPropagation(); confirmDelete(image); }}
 									title="Elimina"
 								>
 									<Trash2 size={14} />
 								</button>
 							</div>
-						</button>
+						</div>
 					{/each}
 				</div>
 			{/if}
