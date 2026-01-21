@@ -71,8 +71,9 @@ class MagazineBuilder:
         typ_path.write_text(document, encoding='utf-8')
 
         # Compile to PDF
+        # Use WEBAPP_DIR as root to access both typst/ and data/ directories
         pdf_path = self.output_dir / f"geko{numero}.pdf"
-        pdf_bytes = typst.compile(str(typ_path), root=str(TEMPLATE_DIR))
+        pdf_bytes = typst.compile(str(typ_path), root=str(WEBAPP_DIR))
         pdf_path.write_bytes(pdf_bytes)
 
         return pdf_path
@@ -97,32 +98,26 @@ class MagazineBuilder:
 
         # Cover page
         if copertina_path:
-            # Convert path to be relative from TEMPLATE_DIR (typst root)
-            # e.g., "data/uploads/file.png" -> "../data/uploads/file.png"
-            if copertina_path.startswith('data/'):
-                copertina_rel = "../" + copertina_path
-            elif not copertina_path.startswith('/') and not copertina_path.startswith('.'):
-                copertina_rel = "../" + copertina_path
-            else:
-                copertina_rel = copertina_path
+            # Path is relative to WEBAPP_DIR root (/app/)
+            # copertina_path is already like "data/uploads/file.png"
             evidenze_typst = self._format_evidenze(evidenze) if evidenze else "()"
             parts.append(f'''#copertina(
   numero: "{numero}",
   mese: "{mese}",
   anno: "{anno}",
-  immagine-principale: "{copertina_rel}",
+  immagine-principale: "{copertina_path}",
   evidenze: {evidenze_typst},
   editoriale-testo: [{editoriale or ""}],
   editoriale-autore: "{editoriale_autore or ""}",
 )''')
             parts.append('')
 
-        # Logo page
+        # Logo page - path relative to WEBAPP_DIR (/app/)
         parts.append(f'''#pagina-logo(
   numero: "{numero}",
   mese: "{mese}",
   anno: "{anno}",
-  logo-rivista: "assets/logo_rivista.jpg",
+  logo-rivista: "typst/assets/logo_rivista.jpg",
   sottotitolo-testo: "Il GEKO RADIO MAGAZINE – Rivista aperiodica del Mountain QRP Club.",
 )''')
         parts.append('')
