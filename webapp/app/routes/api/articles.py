@@ -260,8 +260,8 @@ async def generate_summary(article_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Article has no content")
 
     try:
-        summary = await generate_article_summary(article.contenuto_md, db)
-        article.sommario_llm = summary
+        result = await generate_article_summary(article.contenuto_md, article.titolo)
+        article.sommario_llm = result.get("sommario", "")
         await db.commit()
         await db.refresh(article)
 

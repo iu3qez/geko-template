@@ -248,8 +248,36 @@ async def build_pdf(magazine_id: int, db: AsyncSession = Depends(get_db)):
     if not magazine:
         raise HTTPException(status_code=404, detail="Magazine not found")
 
+    if not magazine.articles:
+        raise HTTPException(status_code=400, detail="Magazine has no articles")
+
     try:
-        pdf_path = await build_magazine_pdf(magazine, db)
+        # Prepare articles typst content
+        articles_typst = [
+            article.contenuto_typ or article.contenuto_md or ""
+            for article in magazine.articles
+        ]
+
+        # Get cover image path if exists
+        copertina_path = None
+        if magazine.copertina:
+            copertina_path = magazine.copertina.path
+
+        # Build PDF (not async)
+        pdf_path = build_magazine_pdf(
+            numero=magazine.numero,
+            mese=magazine.mese,
+            anno=magazine.anno,
+            articles_typst=articles_typst,
+            editoriale=magazine.editoriale,
+            editoriale_autore=magazine.editoriale_autore,
+            copertina_path=copertina_path,
+        )
+
+        # Update magazine status
+        magazine.stato = MagazineStatus.PUBBLICATO
+        await db.commit()
+
         return {
             "status": "success",
             "pdf_url": f"/api/magazines/{magazine_id}/pdf"
