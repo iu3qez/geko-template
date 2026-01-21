@@ -130,7 +130,7 @@
 
 // ============================================
 // COPERTINA (Pagina 1)
-// Layout: 2 colonne
+// Layout: 2 colonne con bordi dorati fino a fondo pagina
 // - Sinistra: immagine principale + editoriale
 // - Destra: Nr./data + IN EVIDENZA + lista articoli
 // ============================================
@@ -157,71 +157,71 @@
     columns: (1.5fr, 1fr),
     gutter: 1.2em,
 
-    // === COLONNA SINISTRA ===
-    [
-      // Immagine principale con bordo dorato
-      #if immagine-principale != none {
-        box(
-          stroke: 3pt + geko-gold.darken(15%),
-          radius: 0pt,
-          clip: true,
+    // === COLONNA SINISTRA - Box unico con bordo dorato ===
+    block(
+      width: 100%,
+      height: 100%,
+      stroke: 3pt + geko-gold,
+      inset: 12pt,
+      [
+        // Immagine principale
+        #if immagine-principale != none {
           image(immagine-principale, width: 100%)
-        )
-      }
+        }
 
-      #v(1.2em)
+        #v(1.2em)
 
-      // Box EDITORIALE con bordo dorato completo (rettangolo chiuso)
-      #block(
-        width: 100%,
-        stroke: 3pt + geko-gold,
-        inset: 12pt,
-        [
-          #text(size: 14pt, weight: "bold", fill: geko-gold)[EDITORIALE]
-          #v(0.5em)
+        // Titolo EDITORIALE
+        #text(size: 14pt, weight: "bold", fill: geko-gold)[EDITORIALE]
+        #v(0.5em)
 
-          #set text(size: 9pt, fill: geko-dark)
-          #set par(justify: true, leading: 0.55em)
-          #editoriale-testo
+        #set text(size: 9pt, fill: geko-dark)
+        #set par(justify: true, leading: 0.55em)
+        #editoriale-testo
 
-          #v(0.6em)
-          #text(size: 9pt, weight: "bold", fill: geko-dark)[#editoriale-autore]
-        ]
-      )
-    ],
-
-    // === COLONNA DESTRA ===
-    [
-      // Header: numero e data
-      #align(right)[
-        #text(size: 10pt, fill: geko-dark)[Nr. #numero | #mese – #anno]
+        #v(0.6em)
+        #text(size: 9pt, weight: "bold", fill: geko-dark)[#editoriale-autore]
       ]
-      #v(1em)
+    ),
 
-      // Titolo "IN EVIDENZA" in box magenta (larghezza intera colonna)
-      #block(
-        width: 100%,
-        fill: geko-magenta,
-        inset: (x: 14pt, y: 8pt),
-        radius: 0pt,
-        align(right, text(size: 20pt, weight: "bold", fill: white, tracking: 1pt)[IN EVIDENZA])
-      )
-
-      #v(1.5em)
-
-      // Lista evidenze
-      #for ev in evidenze {
-        block(width: 100%, below: 1em)[
-          // Titolo evidenza in magenta bold
-          #text(size: 10pt, weight: "bold", fill: geko-magenta)[#upper(ev.titolo):]
-          #v(0.25em)
-          // Descrizione
-          #set text(size: 9pt, fill: geko-dark)
-          #set par(justify: true, leading: 0.5em)
-          #ev.descrizione
+    // === COLONNA DESTRA - Box unico con bordo dorato ===
+    block(
+      width: 100%,
+      height: 100%,
+      stroke: 3pt + geko-gold,
+      inset: 12pt,
+      [
+        // Header: numero e data
+        #align(right)[
+          #text(size: 10pt, fill: geko-dark)[Nr. #numero | #mese – #anno]
         ]
-      }
-    ]
+        #v(1em)
+
+        // Titolo "IN EVIDENZA" in box magenta (larghezza intera)
+        #block(
+          width: 100%,
+          fill: geko-magenta,
+          inset: (x: 14pt, y: 8pt),
+          radius: 0pt,
+          align(right, text(size: 20pt, weight: "bold", fill: white, tracking: 1pt)[IN EVIDENZA])
+        )
+
+        #v(1.5em)
+
+        // Lista evidenze
+        #for ev in evidenze {
+          block(width: 100%, below: 1em)[
+            // Titolo evidenza in magenta bold
+            #text(size: 10pt, weight: "bold", fill: geko-magenta)[#upper(ev.titolo):]
+            #v(0.25em)
+            // Descrizione
+            #set text(size: 9pt, fill: geko-dark)
+            #set par(justify: true, leading: 0.5em)
+            #ev.descrizione
+          ]
+        }
+      ]
+    )
   )
 
   pagebreak()
