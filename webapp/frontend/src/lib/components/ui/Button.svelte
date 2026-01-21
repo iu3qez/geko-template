@@ -1,34 +1,53 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { HTMLButtonAttributes } from 'svelte/elements';
+	import type { HTMLButtonAttributes, HTMLAnchorAttributes } from 'svelte/elements';
 
-	interface Props extends HTMLButtonAttributes {
+	type BaseProps = {
 		variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 		size?: 'sm' | 'md' | 'lg';
 		loading?: boolean;
 		children: Snippet;
-	}
+	};
+
+	type ButtonProps = BaseProps & HTMLButtonAttributes & { href?: never };
+	type AnchorProps = BaseProps & HTMLAnchorAttributes & { href: string };
+	type Props = ButtonProps | AnchorProps;
 
 	let {
 		variant = 'primary',
 		size = 'md',
 		loading = false,
 		disabled = false,
+		href,
 		children,
 		...rest
 	}: Props = $props();
 </script>
 
-<button
-	class="btn btn-{variant} btn-{size}"
-	disabled={disabled || loading}
-	{...rest}
->
-	{#if loading}
-		<span class="spinner"></span>
-	{/if}
-	{@render children()}
-</button>
+{#if href}
+	<a
+		{href}
+		class="btn btn-{variant} btn-{size}"
+		class:disabled={disabled || loading}
+		{...rest}
+	>
+		{#if loading}
+			<span class="spinner"></span>
+		{/if}
+		{@render children()}
+	</a>
+{:else}
+	<button
+		class="btn btn-{variant} btn-{size}"
+		disabled={disabled || loading}
+		{...rest}
+	>
+		{#if loading}
+			<span class="spinner"></span>
+		{/if}
+		{@render children()}
+	</button>
+{/if}
 
 <style>
 	.btn {
@@ -45,9 +64,11 @@
 		transition: all var(--transition-fast);
 	}
 
-	.btn:disabled {
+	.btn:disabled,
+	.btn.disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
+		pointer-events: none;
 	}
 
 	/* Sizes */
