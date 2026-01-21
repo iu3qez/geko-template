@@ -171,11 +171,11 @@
 
       #v(1.2em)
 
-      // Box EDITORIALE con bordo sinistro dorato
+      // Box EDITORIALE con bordo dorato completo (rettangolo chiuso)
       #block(
         width: 100%,
-        stroke: (left: 4pt + geko-gold),
-        inset: (left: 12pt, top: 8pt, bottom: 8pt, right: 4pt),
+        stroke: 3pt + geko-gold,
+        inset: 12pt,
         [
           #text(size: 14pt, weight: "bold", fill: geko-gold)[EDITORIALE]
           #v(0.5em)
@@ -198,15 +198,14 @@
       ]
       #v(1em)
 
-      // Titolo "IN EVIDENZA" in box magenta
-      #align(right)[
-        #box(
-          fill: geko-magenta,
-          inset: (x: 14pt, y: 8pt),
-          radius: 0pt,
-          text(size: 20pt, weight: "bold", fill: white, tracking: 1pt)[IN EVIDENZA]
-        )
-      ]
+      // Titolo "IN EVIDENZA" in box magenta (larghezza intera colonna)
+      #block(
+        width: 100%,
+        fill: geko-magenta,
+        inset: (x: 14pt, y: 8pt),
+        radius: 0pt,
+        align(right, text(size: 20pt, weight: "bold", fill: white, tracking: 1pt)[IN EVIDENZA])
+      )
 
       #v(1.5em)
 
@@ -253,7 +252,7 @@
 
   align(center)[
     #if logo-rivista != none {
-      image(logo-rivista, width: 75%)
+      image(logo-rivista, width: 65%)
     }
 
     #v(1.5em)
