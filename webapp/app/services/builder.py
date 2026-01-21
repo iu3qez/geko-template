@@ -97,12 +97,17 @@ class MagazineBuilder:
 
         # Cover page
         if copertina_path:
+            # Convert to absolute path if relative
+            if not copertina_path.startswith('/'):
+                copertina_abs = str(WEBAPP_DIR / copertina_path)
+            else:
+                copertina_abs = copertina_path
             evidenze_typst = self._format_evidenze(evidenze) if evidenze else "()"
             parts.append(f'''#copertina(
   numero: "{numero}",
   mese: "{mese}",
   anno: "{anno}",
-  immagine-principale: "{copertina_path}",
+  immagine-principale: "{copertina_abs}",
   evidenze: {evidenze_typst},
   editoriale-testo: [{editoriale or ""}],
   editoriale-autore: "{editoriale_autore or ""}",
