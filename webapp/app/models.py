@@ -90,7 +90,7 @@ class Image(Base):
     @property
     def url(self):
         """URL pubblico dell'immagine."""
-        return f"/images/{self.filename}"
+        return f"/uploads/{self.filename}"
 
     @property
     def is_published(self):
