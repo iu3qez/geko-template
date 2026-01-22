@@ -261,7 +261,8 @@ async def build_pdf(magazine_id: int, db: AsyncSession = Depends(get_db)):
                 articles_typst.append(article.contenuto_typ)
             elif article.contenuto_md:
                 # Convert markdown to typst on-the-fly
-                converted = convert_markdown_to_typst(article.contenuto_md)
+                # convert_markdown_to_typst returns (metadata, typst_content)
+                _, converted = convert_markdown_to_typst(article.contenuto_md)
                 articles_typst.append(converted)
             else:
                 articles_typst.append("")
