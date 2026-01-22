@@ -43,7 +43,7 @@ class Magazine(Base):
         "Article",
         secondary=article_magazines,
         back_populates="magazines",
-        order_by="Article.ordine"
+        order_by=article_magazines.c.ordine
     )
     copertina = relationship("Image", foreign_keys=[copertina_id])
 

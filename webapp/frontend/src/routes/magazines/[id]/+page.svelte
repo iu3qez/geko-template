@@ -156,8 +156,6 @@
 		// Get new order of IDs
 		const articleIds = articles.map(a => a.id);
 
-		console.log('Reordering articles:', { magazineId: magazine.id, articleIds });
-
 		try {
 			await magazines.reorderArticles(magazine.id, articleIds);
 			await loadMagazine();

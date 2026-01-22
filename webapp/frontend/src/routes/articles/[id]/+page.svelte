@@ -3,11 +3,11 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import {
-		ArrowLeft, Save, Trash2, Sparkles, BookOpen, Eye, Edit as EditIcon
+		ArrowLeft, Save, Trash2, Sparkles, BookOpen, Eye, Edit as EditIcon, ImageIcon, HelpCircle
 	} from 'lucide-svelte';
 	import { Button, Input, Textarea, Card, Badge, Loading, Modal } from '$lib/components/ui';
-	import { articles, magazines as magazinesApi } from '$lib/api';
-	import type { Article, Magazine } from '$lib/api';
+	import { articles, magazines as magazinesApi, images as imagesApi } from '$lib/api';
+	import type { Article, Magazine, Image } from '$lib/api';
 	import { marked } from 'marked';
 
 	// Configure marked for safe HTML
@@ -51,6 +51,17 @@
 
 	// Preview mode
 	let previewMode = $state(false);
+
+	// Image gallery
+	let imageGalleryModal = $state(false);
+	let galleryImages = $state<Image[]>([]);
+	let loadingImages = $state(false);
+	let uploadingImage = $state(false);
+	let cursorPosition = $state(0);
+	const contentTextareaId = 'content-markdown-editor';
+
+	// Syntax guide
+	let syntaxGuideOpen = $state(true);
 
 	onMount(async () => {
 		await loadArticle();
@@ -178,6 +189,69 @@
 			selectedMagazines = [...selectedMagazines, magId];
 		}
 	}
+
+	async function openImageGallery() {
+		// Save cursor position before opening modal
+		const textarea = document.getElementById(contentTextareaId) as HTMLTextAreaElement | null;
+		if (textarea) {
+			cursorPosition = textarea.selectionStart;
+		}
+		imageGalleryModal = true;
+		loadingImages = true;
+		try {
+			galleryImages = await imagesApi.list();
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Errore caricamento immagini';
+		} finally {
+			loadingImages = false;
+		}
+	}
+
+	function insertImage(image: Image) {
+		const markdown = `\n![${image.alt_text || image.original_filename}](${image.url})\n`;
+		const text = editData.contenuto_md;
+
+		// Find the end of the current line/paragraph
+		let insertPos = cursorPosition;
+		const nextNewline = text.indexOf('\n', cursorPosition);
+		if (nextNewline !== -1) {
+			insertPos = nextNewline;
+		} else {
+			insertPos = text.length;
+		}
+
+		// Insert at position
+		editData.contenuto_md = text.slice(0, insertPos) + markdown + text.slice(insertPos);
+		checkChanges();
+		imageGalleryModal = false;
+
+		// Restore focus and set cursor after inserted text
+		setTimeout(() => {
+			const textarea = document.getElementById(contentTextareaId) as HTMLTextAreaElement | null;
+			if (textarea) {
+				textarea.focus();
+				const newPos = insertPos + markdown.length;
+				textarea.setSelectionRange(newPos, newPos);
+			}
+		}, 100);
+	}
+
+	async function handleImageUpload(event: Event) {
+		const input = event.target as HTMLInputElement;
+		const files = input.files;
+		if (!files || files.length === 0) return;
+
+		uploadingImage = true;
+		try {
+			const uploaded = await imagesApi.upload(files[0], article?.id);
+			galleryImages = [uploaded, ...galleryImages];
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Errore upload immagine';
+		} finally {
+			uploadingImage = false;
+			input.value = '';
+		}
+	}
 </script>
 
 <svelte:head>
@@ -291,6 +365,7 @@
 
 							<div class="form-section">
 								<Textarea
+									id={contentTextareaId}
 									label="Contenuto (Markdown)"
 									bind:value={editData.contenuto_md}
 									oninput={checkChanges}
@@ -303,6 +378,63 @@
 			</div>
 
 			<aside class="sidebar">
+				<!-- Syntax Guide -->
+				<Card>
+					{#snippet header()}
+						<div class="sidebar-header">
+							<h3>Sintassi Markdown</h3>
+							<Button variant="ghost" size="sm" onclick={() => syntaxGuideOpen = !syntaxGuideOpen}>
+								{syntaxGuideOpen ? 'Nascondi' : 'Mostra'}
+							</Button>
+						</div>
+					{/snippet}
+					{#if syntaxGuideOpen}
+						<div class="syntax-guide">
+							<table class="syntax-table">
+								<tbody>
+									<tr><td><code># Titolo</code></td><td>Titolo sezione</td></tr>
+									<tr><td><code>## Sottotitolo</code></td><td>Sottosezione</td></tr>
+									<tr><td><code>**grassetto**</code></td><td><strong>grassetto</strong></td></tr>
+									<tr><td><code>*corsivo*</code></td><td><em>corsivo</em></td></tr>
+									<tr><td><code>[testo](url)</code></td><td>Link</td></tr>
+									<tr><td><code>https://...</code></td><td>Link automatico</td></tr>
+									<tr><td><code>![alt](path)</code></td><td>Immagine</td></tr>
+									<tr><td><code>![alt](path){'{'}width=50%{'}'}</code></td><td>Immagine con dimensione</td></tr>
+									<tr><td><code>- elemento</code></td><td>Lista puntata</td></tr>
+									<tr><td><code>1. elemento</code></td><td>Lista numerata</td></tr>
+									<tr><td><code>&gt; citazione</code></td><td>Blockquote</td></tr>
+								</tbody>
+							</table>
+							<details class="syntax-details">
+								<summary>Tabelle</summary>
+								<pre class="syntax-example">| Col1 | Col2 |
+|------|------|
+| A    | B    |</pre>
+							</details>
+							<details class="syntax-details">
+								<summary>Box evidenza</summary>
+								<pre class="syntax-example">!!! note "Titolo"
+Contenuto del box
+!!!</pre>
+							</details>
+						</div>
+					{/if}
+				</Card>
+
+				<!-- Image Gallery -->
+				<Card>
+					{#snippet header()}
+						<div class="sidebar-header">
+							<h3>Immagini</h3>
+							<Button variant="ghost" size="sm" onclick={openImageGallery}>
+								<ImageIcon size={14} />
+								Galleria
+							</Button>
+						</div>
+					{/snippet}
+					<p class="help-text">Usa la galleria per inserire immagini nel testo.</p>
+				</Card>
+
 				<Card>
 					{#snippet header()}
 						<div class="sidebar-header">
@@ -331,7 +463,7 @@
 					{/if}
 				</Card>
 
-					<Card>
+				<Card>
 					{#snippet header()}
 						<div class="card-header-row">
 							<h3>Sommario AI</h3>
@@ -426,6 +558,49 @@
 		</Button>
 		<Button variant="danger" onclick={handleDelete} loading={deleting}>
 			Elimina
+		</Button>
+	{/snippet}
+</Modal>
+
+<Modal bind:open={imageGalleryModal} title="Galleria Immagini" size="lg">
+	<div class="gallery-upload">
+		<label class="upload-btn">
+			<input
+				type="file"
+				accept="image/*"
+				onchange={handleImageUpload}
+				disabled={uploadingImage}
+			/>
+			{#if uploadingImage}
+				Caricamento...
+			{:else}
+				Carica nuova immagine
+			{/if}
+		</label>
+	</div>
+
+	{#if loadingImages}
+		<Loading text="Caricamento immagini..." />
+	{:else if galleryImages.length === 0}
+		<p class="no-images">Nessuna immagine disponibile. Carica la prima!</p>
+	{:else}
+		<div class="image-gallery">
+			{#each galleryImages as image}
+				<button
+					class="gallery-item"
+					onclick={() => insertImage(image)}
+					title="Clicca per inserire: {image.original_filename}"
+				>
+					<img src={image.url} alt={image.alt_text || image.original_filename} />
+					<span class="image-name">{image.original_filename}</span>
+				</button>
+			{/each}
+		</div>
+	{/if}
+
+	{#snippet footer()}
+		<Button variant="ghost" onclick={() => imageGalleryModal = false}>
+			Chiudi
 		</Button>
 	{/snippet}
 </Modal>
@@ -735,5 +910,132 @@
 	@keyframes fadeIn {
 		from { opacity: 0; }
 		to { opacity: 1; }
+	}
+
+	/* Syntax Guide Styles */
+	.syntax-guide {
+		font-size: var(--text-sm);
+	}
+
+	.syntax-table {
+		width: 100%;
+		border-collapse: collapse;
+	}
+
+	.syntax-table td {
+		padding: var(--space-1) var(--space-2);
+		border-bottom: 1px solid var(--geko-gray-light);
+	}
+
+	.syntax-table td:first-child {
+		font-family: monospace;
+		white-space: nowrap;
+		color: var(--geko-magenta);
+	}
+
+	.syntax-table td:last-child {
+		color: var(--geko-gray);
+		font-size: var(--text-xs);
+	}
+
+	.syntax-details {
+		margin-top: var(--space-2);
+		border-top: 1px solid var(--geko-gray-light);
+		padding-top: var(--space-2);
+	}
+
+	.syntax-details summary {
+		cursor: pointer;
+		color: var(--geko-gold);
+		font-weight: 500;
+		font-size: var(--text-sm);
+	}
+
+	.syntax-example {
+		background: var(--geko-dark);
+		color: var(--geko-light);
+		padding: var(--space-2);
+		border-radius: var(--radius-sm);
+		font-size: var(--text-xs);
+		margin-top: var(--space-2);
+		overflow-x: auto;
+	}
+
+	.help-text {
+		font-size: var(--text-sm);
+		color: var(--geko-gray);
+		margin: 0;
+	}
+
+	/* Image Gallery Styles */
+	.gallery-upload {
+		margin-bottom: var(--space-4);
+		text-align: center;
+	}
+
+	.upload-btn {
+		display: inline-block;
+		padding: var(--space-2) var(--space-4);
+		background: var(--geko-gold);
+		color: white;
+		border-radius: var(--radius-md);
+		cursor: pointer;
+		transition: background var(--transition-base);
+	}
+
+	.upload-btn:hover {
+		background: var(--geko-magenta);
+	}
+
+	.upload-btn input {
+		display: none;
+	}
+
+	.image-gallery {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+		gap: var(--space-3);
+		max-height: 400px;
+		overflow-y: auto;
+	}
+
+	.gallery-item {
+		background: var(--geko-light);
+		border: 2px solid transparent;
+		border-radius: var(--radius-md);
+		padding: var(--space-2);
+		cursor: pointer;
+		transition: all var(--transition-base);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--space-1);
+	}
+
+	.gallery-item:hover {
+		border-color: var(--geko-gold);
+		transform: scale(1.02);
+	}
+
+	.gallery-item img {
+		width: 100%;
+		height: 80px;
+		object-fit: cover;
+		border-radius: var(--radius-sm);
+	}
+
+	.gallery-item .image-name {
+		font-size: var(--text-xs);
+		color: var(--geko-gray);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 100%;
+	}
+
+	.no-images {
+		text-align: center;
+		color: var(--geko-gray);
+		padding: var(--space-6);
 	}
 </style>

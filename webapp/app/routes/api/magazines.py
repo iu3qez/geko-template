@@ -258,14 +258,19 @@ async def build_pdf(magazine_id: int, db: AsyncSession = Depends(get_db)):
         articles_typst = []
         for article in magazine.articles:
             if article.contenuto_typ:
-                articles_typst.append(article.contenuto_typ)
+                content = article.contenuto_typ
             elif article.contenuto_md:
                 # Convert markdown to typst on-the-fly
                 # convert_markdown_to_typst returns (metadata, typst_content)
                 _, converted = convert_markdown_to_typst(article.contenuto_md)
-                articles_typst.append(converted)
+                # Add title heading if content doesn't start with one
+                if not converted.strip().startswith(('= ', '#')):
+                    content = f"= {article.titolo}\n\n{converted}"
+                else:
+                    content = converted
             else:
-                articles_typst.append("")
+                content = ""
+            articles_typst.append(content)
 
         # Build evidenze (highlights) from article summaries
         evidenze = [

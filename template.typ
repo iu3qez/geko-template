@@ -449,6 +449,218 @@
   text(size: 11pt, weight: "bold")[E siamo #totale!]
 }
 
+
+// ============================================
+// PAGINA BENVENUTO NUOVI SOCI (pag 19)
+// ============================================
+
+#let benvenuto-soci(
+  soci: (),
+  totale: 0,
+  logo-club: none,
+) = {
+  titolo-articolo("Un benvenuto a…")
+  
+  text(size: 10pt)[Ecco i nostri nuovi soci:]
+  v(0.8em)
+  
+  // Tabella soci (5 colonne)
+  if soci.len() > 0 {
+    table(
+      columns: (1fr,) * 5,
+      stroke: 0.5pt + geko-dark.lighten(70%),
+      inset: 5pt,
+      align: center,
+      ..soci.map(s => text(size: 8pt)[#s])
+    )
+  }
+  
+  v(0.8em)
+  text(size: 12pt, weight: "bold")[E siamo #totale!]
+  
+  // Logo club centrato
+  if logo-club != none {
+    v(1em)
+    align(center, image(logo-club, width: 35%))
+  }
+}
+
+// ============================================
+// PAGINA TEAM MQC (pag 20)
+// Layout: righe con membri, poi info iscrizione
+// ============================================
+
+#let pagina-team(
+  membri: (),
+  link-iscrizione: none,
+) = {
+  titolo-articolo("MQC TEAM")
+  
+  // Grid per i membri - layout flessibile
+  if membri.len() > 0 {
+    // Prima riga: 4 membri (presidente, consigliere, consigliere, vice)
+    // Seconda riga: 2 membri centrati (segretario, consigliere)
+    // Terza riga: 3 membri (manager vari)
+    
+    let render-membro(m) = {
+      align(center)[
+        #if m.at("foto", default: none) != none {
+          image(m.foto, width: 90%)
+        }
+        #v(0.4em)
+        #text(weight: "bold", size: 10pt, fill: geko-magenta)[#m.nominativo #m.nome]
+        #v(0.15em)
+        #text(size: 9pt)[#m.ruolo]
+        #if m.at("ruolo2", default: none) != none {
+          linebreak()
+          text(size: 9pt)[#m.ruolo2]
+        }
+      ]
+    }
+    
+    // Riga 1: primi 4 membri
+    if membri.len() >= 4 {
+      grid(
+        columns: (1fr,) * 4,
+        gutter: 0.8em,
+        ..membri.slice(0, 4).map(render-membro)
+      )
+    }
+    
+    v(1.2em)
+    
+    // Riga 2: membri 5-6 centrati
+    if membri.len() >= 6 {
+      align(center)[
+        #grid(
+          columns: (1fr, 1fr),
+          gutter: 2em,
+          ..membri.slice(4, 6).map(render-membro)
+        )
+      ]
+    }
+    
+    v(1.2em)
+    
+    // Riga 3: membri 7-9
+    if membri.len() >= 9 {
+      grid(
+        columns: (1fr,) * 3,
+        gutter: 0.8em,
+        ..membri.slice(6, 9).map(render-membro)
+      )
+    }
+    
+    // Eventuali altri membri
+    if membri.len() > 9 {
+      v(1em)
+      grid(
+        columns: (1fr,) * 3,
+        gutter: 0.8em,
+        ..membri.slice(9).map(render-membro)
+      )
+    }
+  }
+  
+  v(1.5em)
+  
+  // Link iscrizione
+  align(center)[
+    #text(size: 11pt)[Per iscriversi al nostro club:]
+    #v(0.3em)
+    #if link-iscrizione != none {
+      link(link-iscrizione, text(size: 12pt, weight: "bold", fill: geko-magenta)[Modulo d'iscrizione])
+    } else {
+      text(size: 12pt, weight: "bold", fill: geko-magenta)[Modulo d'iscrizione]
+    }
+  ]
+  
+  v(1em)
+  
+  align(center)[
+    #text(size: 11pt, weight: "bold")[Sono graditi i contributi dei lettori, particolarmente con articoli]
+    #linebreak()
+    #text(size: 11pt, weight: "bold")[tecnici e di autocostruzione.]
+  ]
+}
+
+// ============================================
+// PAGINA FINALE (pag 21)
+// Lista distribuzione, diffusione, donazione
+// ============================================
+
+#let pagina-finale(
+  link-lista-distribuzione: none,
+  link-donazione: none,
+  immagine-frequenze: none,
+  immagine-donazione: none,
+) = {
+  v(2em)
+  
+  // Invito lista distribuzione
+  align(center)[
+    #text(size: 11pt)[Per chi desidera ricevere questo Bollettino può iscriversi alla]
+    #linebreak()
+    #text(size: 11pt)[nostra ]
+    #if link-lista-distribuzione != none {
+      link(link-lista-distribuzione, text(weight: "bold", fill: geko-magenta)[Lista di Distribuzione])
+    } else {
+      text(weight: "bold", fill: geko-magenta)[Lista di Distribuzione]
+    }
+    #text(size: 11pt)[.]
+  ]
+  
+  v(2em)
+  
+  // Invito diffusione - testo grande blu scuro
+  align(center)[
+    #text(size: 18pt, weight: "bold", fill: rgb("#1a4a6e"))[Diffondete il Geko Radio Magazine]
+    #linebreak()
+    #text(size: 18pt, weight: "bold", fill: rgb("#1a4a6e"))[fra i Vostri amici.]
+  ]
+  
+  v(2.5em)
+  
+  // Sezione donazione
+  align(center)[
+    #text(size: 16pt, weight: "bold", fill: rgb("#1a4a6e"))[Aiutaci a sostenere il Mountain QRP Club!]
+  ]
+  
+  v(1em)
+  
+  align(center)[
+    #text(size: 10pt)[Ci stiamo mettendo tanta dedizione per offrirti un servizio sempre ai massimi livelli. Un tuo]
+    #linebreak()
+    #text(size: 10pt)[piccolo contributo è importante, anche del valore di un semplice caffè.]
+    #linebreak()
+    #text(size: 10pt)[Grazie.]
+  ]
+  
+  v(1.5em)
+  
+  // Immagini frequenze e donazione affiancate
+  grid(
+    columns: (1fr, 1fr),
+    gutter: 2em,
+    align(center)[
+      #if immagine-frequenze != none {
+        image(immagine-frequenze, width: 80%)
+      }
+    ],
+    align(center)[
+      #if immagine-donazione != none {
+        if link-donazione != none {
+          link(link-donazione, image(immagine-donazione, width: 60%))
+        } else {
+          image(immagine-donazione, width: 60%)
+        }
+      }
+    ]
+  )
+}
+
+
+
 // ============================================
 // FIGURE CON DIDASCALIA
 // ============================================
