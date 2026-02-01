@@ -73,6 +73,10 @@ class MarkdownToTypstConverter:
             if img_match:
                 alt = img_match.group(1)
                 path = img_match.group(2)
+                # Convert web URL path to Typst filesystem path
+                # /uploads/x.png → /data/uploads/x.png (for Typst compilation root)
+                if path.startswith('/uploads/'):
+                    path = '/data' + path
                 if alt:
                     result.append(f'#figura("{path}", didascalia: "{alt}")')
                 else:
