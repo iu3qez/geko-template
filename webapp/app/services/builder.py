@@ -36,6 +36,12 @@ class MagazineBuilder:
         editoriale_autore: Optional[str] = None,
         copertina_path: Optional[str] = None,
         evidenze: Optional[list[dict]] = None,
+        team_membri: Optional[list[dict]] = None,
+        link_iscrizione: Optional[str] = None,
+        link_lista_distribuzione: Optional[str] = None,
+        link_donazione: Optional[str] = None,
+        immagine_frequenze: Optional[str] = None,
+        immagine_donazione: Optional[str] = None,
     ) -> Path:
         """
         Build complete magazine PDF.
@@ -49,6 +55,12 @@ class MagazineBuilder:
             editoriale_autore: Editorial author
             copertina_path: Path to cover image
             evidenze: List of highlights for cover {"titolo": ..., "descrizione": ...}
+            team_membri: List of team members {"foto", "nominativo", "nome", "ruolo", "ruolo2"}
+            link_iscrizione: Link to subscription form
+            link_lista_distribuzione: Link to distribution list
+            link_donazione: Link to donation page
+            immagine_frequenze: Path to frequencies image
+            immagine_donazione: Path to donation QR image
 
         Returns:
             Path to generated PDF
@@ -63,6 +75,12 @@ class MagazineBuilder:
             editoriale_autore=editoriale_autore,
             copertina_path=copertina_path,
             evidenze=evidenze,
+            team_membri=team_membri,
+            link_iscrizione=link_iscrizione,
+            link_lista_distribuzione=link_lista_distribuzione,
+            link_donazione=link_donazione,
+            immagine_frequenze=immagine_frequenze,
+            immagine_donazione=immagine_donazione,
         )
 
         # Write .typ file
@@ -88,6 +106,12 @@ class MagazineBuilder:
         editoriale_autore: Optional[str],
         copertina_path: Optional[str],
         evidenze: Optional[list[dict]],
+        team_membri: Optional[list[dict]] = None,
+        link_iscrizione: Optional[str] = None,
+        link_lista_distribuzione: Optional[str] = None,
+        link_donazione: Optional[str] = None,
+        immagine_frequenze: Optional[str] = None,
+        immagine_donazione: Optional[str] = None,
     ) -> str:
         """Generate complete Typst document."""
         parts = []
@@ -139,6 +163,19 @@ class MagazineBuilder:
             parts.append(article)
             parts.append('')
 
+        # Team page (if members are configured)
+        if team_membri:
+            parts.append(self._generate_team_page(team_membri, link_iscrizione))
+            parts.append('')
+
+        # Final page
+        parts.append(self._generate_final_page(
+            link_lista_distribuzione,
+            link_donazione,
+            immagine_frequenze,
+            immagine_donazione
+        ))
+
         return '\n'.join(parts)
 
     def _format_evidenze(self, evidenze: list[dict]) -> str:
@@ -149,6 +186,64 @@ class MagazineBuilder:
             descrizione = ev.get('descrizione', '')
             items.append(f'(titolo: "{titolo}", descrizione: "{descrizione}")')
         return '(\n    ' + ',\n    '.join(items) + ',\n  )'
+
+    def _generate_team_page(
+        self,
+        membri: list[dict],
+        link_iscrizione: Optional[str] = None
+    ) -> str:
+        """Generate Typst code for team page."""
+        # Format members as Typst array
+        membri_items = []
+        for m in membri:
+            foto = m.get('foto', '')
+            if foto and not foto.startswith('/'):
+                foto = f"/{foto}"
+            nominativo = m.get('nominativo', '')
+            nome = m.get('nome', '')
+            ruolo = m.get('ruolo', '')
+            ruolo2 = m.get('ruolo2', '')
+
+            member_str = f'(foto: "{foto}", nominativo: "{nominativo}", nome: "{nome}", ruolo: "{ruolo}"'
+            if ruolo2:
+                member_str += f', ruolo2: "{ruolo2}"'
+            member_str += ')'
+            membri_items.append(member_str)
+
+        membri_typst = '(\n    ' + ',\n    '.join(membri_items) + ',\n  )' if membri_items else '()'
+
+        link_str = f'"{link_iscrizione}"' if link_iscrizione else 'none'
+
+        return f'''#pagina-team(
+  membri: {membri_typst},
+  link-iscrizione: {link_str},
+)'''
+
+    def _generate_final_page(
+        self,
+        link_lista_distribuzione: Optional[str] = None,
+        link_donazione: Optional[str] = None,
+        immagine_frequenze: Optional[str] = None,
+        immagine_donazione: Optional[str] = None,
+    ) -> str:
+        """Generate Typst code for final page."""
+        # Format paths (add leading / if needed)
+        if immagine_frequenze and not immagine_frequenze.startswith('/'):
+            immagine_frequenze = f"/{immagine_frequenze}"
+        if immagine_donazione and not immagine_donazione.startswith('/'):
+            immagine_donazione = f"/{immagine_donazione}"
+
+        link_lista_str = f'"{link_lista_distribuzione}"' if link_lista_distribuzione else 'none'
+        link_donazione_str = f'"{link_donazione}"' if link_donazione else 'none'
+        img_freq_str = f'"{immagine_frequenze}"' if immagine_frequenze else 'none'
+        img_don_str = f'"{immagine_donazione}"' if immagine_donazione else 'none'
+
+        return f'''#pagina-finale(
+  link-lista-distribuzione: {link_lista_str},
+  link-donazione: {link_donazione_str},
+  immagine-frequenze: {img_freq_str},
+  immagine-donazione: {img_don_str},
+)'''
 
 
 def build_magazine_pdf(

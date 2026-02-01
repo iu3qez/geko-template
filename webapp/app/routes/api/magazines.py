@@ -11,7 +11,8 @@ from datetime import datetime
 import os
 
 from ...database import get_db
-from ...models import Magazine, MagazineStatus, Article, Image, article_magazines
+from ...models import Magazine, MagazineStatus, Article, Image, article_magazines, Config
+import json
 
 router = APIRouter(prefix="/magazines")
 
@@ -287,6 +288,15 @@ async def build_pdf(magazine_id: int, db: AsyncSession = Depends(get_db)):
         if magazine.copertina:
             copertina_path = magazine.copertina.path
 
+        # Load team and final page config
+        team_json = await Config.get(db, "team_membri", "[]")
+        team_membri = json.loads(team_json) if team_json else []
+        link_iscrizione = await Config.get(db, "link_iscrizione", "")
+        link_lista_distribuzione = await Config.get(db, "link_lista_distribuzione", "")
+        link_donazione = await Config.get(db, "link_donazione", "")
+        immagine_frequenze = await Config.get(db, "immagine_frequenze", "")
+        immagine_donazione = await Config.get(db, "immagine_donazione", "")
+
         # Build PDF (not async)
         pdf_path = build_magazine_pdf(
             numero=magazine.numero,
@@ -297,6 +307,12 @@ async def build_pdf(magazine_id: int, db: AsyncSession = Depends(get_db)):
             editoriale_autore=magazine.editoriale_autore,
             copertina_path=copertina_path,
             evidenze=evidenze,
+            team_membri=team_membri if team_membri else None,
+            link_iscrizione=link_iscrizione or None,
+            link_lista_distribuzione=link_lista_distribuzione or None,
+            link_donazione=link_donazione or None,
+            immagine_frequenze=immagine_frequenze or None,
+            immagine_donazione=immagine_donazione or None,
         )
 
         # Update magazine status

@@ -107,7 +107,7 @@ services:
 
         - "traefik.http.routers.geko-rtr.rule=Host(`geko.fabris.me`)"
 
-        - "traefik.http.routers.geko-rtr.middlewares=middlewares-authentik@file"
+        - "traefik.http.routers.geko-rtr.middlewares=chain-forwardAuth-authentik@file"
         # - traefik.http.services.geko-svc.loadbalancer.server.port=80
 
     networks:

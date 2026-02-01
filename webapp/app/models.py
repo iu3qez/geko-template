@@ -132,6 +132,14 @@ class Config(Base):
         "sito_web": ("https://www.mqc.it", "Sito web del club"),
         "email_redazione": ("redazione@mqc.it", "Email della redazione"),
         "claude_model": ("claude-3-5-haiku-20241022", "Modello Claude per generazione sommari AI"),
+        # Team MQC
+        "team_membri": ("[]", "Membri del team MQC (JSON array)"),
+        "link_iscrizione": ("", "Link al modulo di iscrizione"),
+        # Pagina finale
+        "link_lista_distribuzione": ("", "Link alla lista di distribuzione"),
+        "link_donazione": ("", "Link per donazione"),
+        "immagine_frequenze": ("", "Path immagine frequenze MQC"),
+        "immagine_donazione": ("", "Path immagine QR donazione"),
     }
 
     @classmethod
