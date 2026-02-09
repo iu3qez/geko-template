@@ -341,7 +341,7 @@
   // Font principale (Latin Modern Roman simile a Libertine)
   set text(
     font: ("Latin Modern Roman", "DejaVu Serif", "FreeSerif"),
-    size: 10pt,
+    size: 12pt,
     lang: "it",
     fill: geko-dark,
   )
