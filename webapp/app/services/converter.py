@@ -208,8 +208,8 @@ class MarkdownToTypstConverter:
         rows_content = '\n'.join(rows_strs)
 
         return f'''#tabella-geko(
-  headers: ({headers_str}),
-  rows: (
+  ({headers_str},),
+  (
 {rows_content}
   )
 )'''
