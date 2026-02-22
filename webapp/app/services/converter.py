@@ -119,11 +119,11 @@ class MarkdownToTypstConverter:
                 table_rows = []
                 # Don't increment i, process current line
 
-            # Headers: # → =
+            # Headers: # → == (shifted down one level so only article title is H1)
             if line.startswith('#'):
                 level = len(re.match(r'^#+', line).group())
                 text = line.lstrip('#').strip()
-                result.append('=' * level + ' ' + text)
+                result.append('=' * (level + 1) + ' ' + text)
                 i += 1
                 continue
 

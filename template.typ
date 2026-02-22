@@ -295,7 +295,7 @@
   outline(
     title: none,
     indent: auto,
-    depth: 2,
+    depth: 1,
   )
 
   pagebreak()
