@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { Save, RefreshCw, Plus, Trash2, Upload, Users, FileText } from 'lucide-svelte';
-	import { Button, Input, Card, Loading, Toast } from '$lib/components/ui';
+	import { Button, Input, Select, Card, Loading, Toast } from '$lib/components/ui';
 	import { config, images } from '$lib/api';
 	import type { ConfigItem, Image } from '$lib/api';
 
@@ -231,11 +231,23 @@
 					{#each sortedGeneralConfigKeys as key}
 						{@const item = configItems[key]}
 						<div class="config-item">
-							<Input
-								label={formatLabel(key)}
-								hint={item.description}
-								bind:value={editValues[key]}
-							/>
+							{#if key === 'claude_model'}
+								<Select
+									label={formatLabel(key)}
+									hint={item.description}
+									bind:value={editValues[key]}
+								>
+									<option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (veloce, economico)</option>
+									<option value="claude-sonnet-4-6">Claude Sonnet 4.6 (bilanciato)</option>
+									<option value="claude-opus-4-6">Claude Opus 4.6 (più capace)</option>
+								</Select>
+							{:else}
+								<Input
+									label={formatLabel(key)}
+									hint={item.description}
+									bind:value={editValues[key]}
+								/>
+							{/if}
 							{#if item.updated_at}
 								<span class="last-updated">
 									Ultimo aggiornamento: {new Date(item.updated_at).toLocaleDateString('it-IT')}
