@@ -195,15 +195,23 @@ class MarkdownToTypstConverter:
 
         return '\n'.join(result)
 
+    def _convert_inline(self, text: str) -> str:
+        """Convert Markdown inline formatting to Typst."""
+        # Bold: **text** → *text*
+        text = re.sub(r'\*\*([^*]+)\*\*', r'*\1*', text)
+        # Italic: *text* or _text_ → _text_
+        text = re.sub(r'(?<!\*)\*([^*]+)\*(?!\*)', r'_\1_', text)
+        return text
+
     def _format_table(self, headers: list[str], rows: list[list[str]]) -> str:
         """Format a table as Typst #tabella-geko."""
-        # Format headers
-        headers_str = ', '.join(f'"{h}"' for h in headers)
+        # Format headers with content brackets to support inline formatting
+        headers_str = ', '.join(f'[{self._convert_inline(h)}]' for h in headers)
 
-        # Format rows
+        # Format rows with content brackets
         rows_strs = []
         for row in rows:
-            row_str = ', '.join(f'"{c}"' for c in row)
+            row_str = ', '.join(f'[{self._convert_inline(c)}]' for c in row)
             rows_strs.append(f'    ({row_str}),')
         rows_content = '\n'.join(rows_strs)
 
