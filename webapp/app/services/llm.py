@@ -56,7 +56,7 @@ class ClaudeSummaryService:
     """
 
     # Default model if none specified
-    DEFAULT_MODEL = "claude-3-5-haiku-20241022"
+    DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         self.api_key = api_key or _load_api_key()

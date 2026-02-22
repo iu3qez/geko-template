@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 from typing import Optional
@@ -40,7 +41,7 @@ class ImageResponse(BaseModel):
         from_attributes = True
 
 
-def image_to_response(image: Image) -> dict:
+def image_to_response(image: Image, is_published: bool = False) -> dict:
     """Convert Image model to response dict."""
     return {
         "id": image.id,
@@ -51,7 +52,7 @@ def image_to_response(image: Image) -> dict:
         "article_id": image.article_id,
         "uploaded_at": image.uploaded_at.isoformat() if image.uploaded_at else None,
         "url": image.url,
-        "is_published": image.is_published
+        "is_published": is_published,
     }
 
 
@@ -63,7 +64,11 @@ async def list_images(
     db: AsyncSession = Depends(get_db)
 ):
     """List all images with optional filters."""
-    query = select(Image).order_by(Image.uploaded_at.desc())
+    query = (
+        select(Image)
+        .options(selectinload(Image.article).selectinload(Article.magazines))
+        .order_by(Image.uploaded_at.desc())
+    )
 
     if article_id:
         query = query.where(Image.article_id == article_id)
@@ -71,37 +76,25 @@ async def list_images(
     result = await db.execute(query)
     images = result.scalars().all()
 
-    # Filter by magazine or published status (requires loading relationships)
+    # Filter by magazine or published status
     filtered_images = []
     for img in images:
-        # Load article if needed for filtering
-        if magazine_id or published is not None:
-            if img.article_id:
-                art_result = await db.execute(
-                    select(Article).where(Article.id == img.article_id)
-                )
-                article = art_result.scalar_one_or_none()
-                if article:
-                    # Load magazines for article
-                    await db.refresh(article, ["magazines"])
+        is_pub = False
+        if img.article and img.article.magazines:
+            is_pub = any(
+                m.stato == MagazineStatus.PUBBLICATO
+                for m in img.article.magazines
+            )
 
-                    if magazine_id:
-                        if not any(m.id == magazine_id for m in article.magazines):
-                            continue
+            if magazine_id:
+                if not any(m.id == magazine_id for m in img.article.magazines):
+                    continue
 
-                    if published is not None:
-                        is_pub = any(
-                            m.stato == MagazineStatus.PUBBLICATO
-                            for m in article.magazines
-                        )
-                        if is_pub != published:
-                            continue
-            else:
-                # Image without article
-                if published:
-                    continue  # Unpublished images don't have articles
+        if published is not None:
+            if is_pub != published:
+                continue
 
-        filtered_images.append(image_to_response(img))
+        filtered_images.append(image_to_response(img, is_published=is_pub))
 
     return filtered_images
 
@@ -109,14 +102,25 @@ async def list_images(
 @router.get("/{image_id}")
 async def get_image(image_id: int, db: AsyncSession = Depends(get_db)):
     """Get a single image by ID."""
-    query = select(Image).where(Image.id == image_id)
+    query = (
+        select(Image)
+        .options(selectinload(Image.article).selectinload(Article.magazines))
+        .where(Image.id == image_id)
+    )
     result = await db.execute(query)
     image = result.scalar_one_or_none()
 
     if not image:
         raise HTTPException(status_code=404, detail="Image not found")
 
-    return image_to_response(image)
+    is_pub = False
+    if image.article and image.article.magazines:
+        is_pub = any(
+            m.stato == MagazineStatus.PUBBLICATO
+            for m in image.article.magazines
+        )
+
+    return image_to_response(image, is_published=is_pub)
 
 
 @router.post("")
