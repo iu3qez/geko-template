@@ -54,6 +54,7 @@
 
 	// Image gallery
 	let imageGalleryModal = $state(false);
+	let imageInsertWidth = $state('100');
 	let galleryImages = $state<Image[]>([]);
 	let loadingImages = $state(false);
 	let uploadingImage = $state(false);
@@ -208,7 +209,8 @@
 	}
 
 	function insertImage(image: Image) {
-		const markdown = `\n![${image.alt_text || image.original_filename}](${image.url})\n`;
+		const widthAttr = imageInsertWidth !== '100' ? `{width=${imageInsertWidth}%}` : '';
+		const markdown = `\n![${image.alt_text || image.original_filename}](${image.url})${widthAttr}\n`;
 		const text = editData.contenuto_md;
 
 		// Find the end of the current line/paragraph
@@ -577,6 +579,17 @@ Contenuto del box
 				Carica nuova immagine
 			{/if}
 		</label>
+	</div>
+
+	<div class="width-selector">
+		<span class="width-label">Larghezza:</span>
+		{#each ['100', '80', '60', '50', '30'] as w}
+			<button
+				class="width-chip"
+				class:active={imageInsertWidth === w}
+				onclick={() => imageInsertWidth = w}
+			>{w}%</button>
+		{/each}
 	</div>
 
 	{#if loadingImages}
@@ -1031,6 +1044,40 @@ Contenuto del box
 		overflow: hidden;
 		text-overflow: ellipsis;
 		max-width: 100%;
+	}
+
+	.width-selector {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		margin-bottom: var(--space-4);
+		justify-content: center;
+	}
+
+	.width-label {
+		font-size: var(--text-sm);
+		color: var(--geko-gray);
+		font-weight: 500;
+	}
+
+	.width-chip {
+		padding: var(--space-1) var(--space-3);
+		border: 1px solid var(--geko-gold);
+		border-radius: 999px;
+		background: transparent;
+		color: var(--geko-gold);
+		font-size: var(--text-sm);
+		cursor: pointer;
+		transition: all var(--transition-base);
+	}
+
+	.width-chip:hover {
+		background: color-mix(in srgb, var(--geko-gold) 15%, transparent);
+	}
+
+	.width-chip.active {
+		background: var(--geko-gold);
+		color: white;
 	}
 
 	.no-images {

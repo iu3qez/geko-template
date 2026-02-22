@@ -245,6 +245,7 @@ async def delete_article(article_id: int, db: AsyncSession = Depends(get_db)):
 async def generate_summary(article_id: int, db: AsyncSession = Depends(get_db)):
     """Generate AI summary for an article."""
     from ...services.llm import generate_article_summary
+    from ...models import Config
 
     query = select(Article).options(
         selectinload(Article.magazines),
@@ -261,7 +262,8 @@ async def generate_summary(article_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Article has no content")
 
     try:
-        result = await generate_article_summary(article.contenuto_md, article.titolo)
+        model = await Config.get(db, "claude_model")
+        result = await generate_article_summary(article.contenuto_md, article.titolo, model=model)
         article.sommario_llm = result.get("sommario", "")
         await db.commit()
         await db.refresh(article)

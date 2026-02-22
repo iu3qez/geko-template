@@ -113,9 +113,10 @@ class MarkdownToTypstConverter:
 
             if in_box:
                 if line.strip() == '!!!':
-                    # Close box — preserve paragraph breaks with double newlines
+                    # Close box — each non-empty line becomes a separate paragraph
+                    # (double newline between lines) so Typst renders line breaks
                     content_text = '\n\n'.join(
-                        '\n'.join(group) for group in self._split_paragraphs(box_content)
+                        line for line in box_content if line.strip()
                     )
                     result.append(f'#box-evidenza(titolo: "{box_title}")[')
                     result.append(f'  {content_text}')
@@ -230,7 +231,7 @@ class MarkdownToTypstConverter:
                 if alt:
                     parts.append(f'didascalia: "{alt}"')
                 if width:
-                    parts.append(f'width: {width}')
+                    parts.append(f'larghezza: {width}')
                 result.append(f'#figura({", ".join(parts)})')
                 i += 1
                 continue
