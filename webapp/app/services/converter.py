@@ -1,4 +1,41 @@
-"""Convert Markdown to Typst format for GEKO template."""
+"""
+Markdown → Typst converter for the GEKO Radio Magazine template.
+
+Converts Markdown articles into Typst source code using the custom functions
+defined in template.typ (e.g. #box-evidenza, #figura, #tabella-geko, #link-geko).
+
+Conversion pipeline (per-line, single pass):
+  1. Block-level structures (stateful, multi-line):
+     - Box evidenza (!!! admonitions)
+     - Blockquotes (> lines)
+     - Tables (| delimited rows)
+  2. Block-level elements (single line):
+     - Headings (# → =, shifted +1 so article title stays H1)
+     - Images (![alt](src){width=X} → #figura)
+  3. Inline formatting:
+     - Bullet lists (* item → - item, must precede bold/italic)
+     - Numbered lists (1. item → + item)
+     - Bold (**text** → *text*)
+     - Italic (*text* → _text_)
+     - Lone asterisk escaping (safety net for malformed markdown)
+     - Links ([text](url) → #link-geko)
+     - Bare URLs (https://... → #link-geko)
+
+Markdown syntax mapping:
+  Markdown                     Typst (GEKO template)
+  ─────────────────────────    ─────────────────────────────────
+  # Heading                    == Heading  (level shifted +1)
+  **bold**                     *bold*
+  *italic* / _italic_          _italic_
+  [text](url)                  #link-geko("url", testo: "text")
+  https://bare.url             #link-geko("https://bare.url")
+  ![alt](path){width=80%}     #figura("path", didascalia: "alt", width: 80%)
+  * bullet / - bullet          - bullet
+  1. numbered                  + numbered
+  > blockquote                 #quote[text]
+  | table | row |              #tabella-geko(headers, rows)
+  !!! / !!! type "title"       #box-evidenza(titolo: "title")[content]
+"""
 
 import re
 from typing import Optional
@@ -7,59 +44,79 @@ from markdown_it import MarkdownIt
 
 
 class MarkdownToTypstConverter:
-    """Converts Markdown content to Typst format compatible with GEKO template."""
+    """
+    Converts Markdown content to Typst format compatible with the GEKO template.
+
+    Usage:
+        converter = MarkdownToTypstConverter()
+        metadata, typst_code = converter.convert(markdown_with_frontmatter)
+
+        # Or generate a full article with title/author wrapper:
+        typst_article = converter.generate_article_typst(
+            titolo="Titolo", autore="IK2ABC", nome="Mario",
+            sottotitolo="Sottotitolo", contenuto=typst_code,
+        )
+    """
 
     def __init__(self):
         self.md = MarkdownIt()
 
     def convert(self, markdown_text: str) -> tuple[dict, str]:
         """
-        Convert markdown to typst.
+        Convert markdown (with optional YAML frontmatter) to Typst.
+
+        Args:
+            markdown_text: Full markdown string, optionally with --- frontmatter.
 
         Returns:
-            tuple: (metadata dict, typst content string)
+            (metadata, typst_content) — metadata dict from frontmatter,
+            and the converted Typst source string.
         """
-        # Parse frontmatter
         post = frontmatter.loads(markdown_text)
         metadata = dict(post.metadata)
         content = post.content
-
-        # Convert content
         typst_content = self._convert_content(content)
-
         return metadata, typst_content
 
+    # ── Main conversion loop ───────────────────────────────────────────
+
     def _convert_content(self, content: str) -> str:
-        """Convert markdown content to typst syntax."""
+        """
+        Convert markdown content to Typst syntax, line by line.
+
+        Uses a single-pass state machine to handle multi-line blocks
+        (box, blockquote, table) while converting inline formatting
+        on regular lines.
+        """
         lines = content.split('\n')
         result = []
+
+        # State for multi-line blocks
         in_box = False
         box_title = ""
-        box_content = []
+        box_content: list[str] = []
+
         in_table = False
-        table_headers = []
-        table_rows = []
+        table_headers: list[str] = []
+        table_rows: list[list[str]] = []
+
         in_blockquote = False
-        blockquote_lines = []
+        blockquote_lines: list[str] = []
 
         i = 0
         while i < len(lines):
             line = lines[i]
 
-            # Handle box evidenza (admonition syntax)
-            if line.strip().startswith('!!! '):
-                match = re.match(r'!!!\s*\w+\s*"([^"]*)"', line)
-                if match:
-                    in_box = True
-                    box_title = match.group(1)
-                    box_content = []
-                i += 1
-                continue
+            # ── Box evidenza (admonition) ──────────────────────────
+            # Close check MUST come before open check, otherwise a
+            # closing "!!!" would be misinterpreted as opening a new box.
 
             if in_box:
                 if line.strip() == '!!!':
-                    # Close box
-                    content_text = '\n'.join(box_content)
+                    # Close box — preserve paragraph breaks with double newlines
+                    content_text = '\n\n'.join(
+                        '\n'.join(group) for group in self._split_paragraphs(box_content)
+                    )
                     result.append(f'#box-evidenza(titolo: "{box_title}")[')
                     result.append(f'  {content_text}')
                     result.append(']')
@@ -71,55 +128,75 @@ class MarkdownToTypstConverter:
                 i += 1
                 continue
 
-            # Handle blockquotes: > text → #quote[text]
+            # Open box: bare "!!!", !!! type "title", or !!! "title"
+            if line.strip().startswith('!!!'):
+                stripped = line.strip()
+                if stripped == '!!!':
+                    in_box = True
+                    box_title = ""
+                    box_content = []
+                    i += 1
+                    continue
+                match = re.match(r'!!!\s*(?:\w+\s*)?"([^"]*)"', stripped)
+                if match:
+                    in_box = True
+                    box_title = match.group(1)
+                    box_content = []
+                i += 1
+                continue
+
+            # ── Blockquote ─────────────────────────────────────────
+            # Collect consecutive > lines, emit #quote[...] when done.
+
             if line.strip().startswith('>'):
                 if not in_blockquote:
                     in_blockquote = True
                     blockquote_lines = []
-                # Remove > prefix and add to blockquote
                 quote_text = re.sub(r'^>\s?', '', line)
                 blockquote_lines.append(quote_text)
                 i += 1
                 continue
             elif in_blockquote:
-                # End of blockquote
+                # First non-quote line ends the block
                 quote_content = '\n'.join(blockquote_lines)
                 result.append(f'#quote[{quote_content}]')
                 result.append('')
                 in_blockquote = False
                 blockquote_lines = []
-                # Don't increment i, process current line
+                # Fall through to process current line normally
 
-            # Handle tables
+            # ── Table ──────────────────────────────────────────────
+            # Collect | delimited rows, emit #tabella-geko when done.
+
             if '|' in line and line.strip().startswith('|'):
                 if not in_table:
+                    # First row = headers
                     in_table = True
-                    table_headers = []
+                    table_headers = [c.strip() for c in line.strip().strip('|').split('|')]
                     table_rows = []
-                    # Parse header row
-                    cells = [c.strip() for c in line.strip().strip('|').split('|')]
-                    table_headers = cells
                     i += 1
                     # Skip separator row (|---|---|)
                     if i < len(lines) and re.match(r'^\|[\s\-:|]+\|$', lines[i].strip()):
                         i += 1
                     continue
                 else:
-                    # Parse data row
+                    # Subsequent rows = data
                     cells = [c.strip() for c in line.strip().strip('|').split('|')]
                     table_rows.append(cells)
                     i += 1
                     continue
             elif in_table:
-                # End of table, output it
+                # First non-table line ends the table
                 result.append(self._format_table(table_headers, table_rows))
                 result.append('')
                 in_table = False
                 table_headers = []
                 table_rows = []
-                # Don't increment i, process current line
+                # Fall through to process current line normally
 
-            # Headers: # → == (shifted down one level so only article title is H1)
+            # ── Headings ───────────────────────────────────────────
+            # Markdown # = Typst ==  (shifted +1 so article title stays =)
+
             if line.startswith('#'):
                 level = len(re.match(r'^#+', line).group())
                 text = line.lstrip('#').strip()
@@ -127,7 +204,9 @@ class MarkdownToTypstConverter:
                 i += 1
                 continue
 
-            # Images with dimensions: ![alt](path){width=50%} → #figura with width
+            # ── Images ─────────────────────────────────────────────
+            # ![alt](path){width=50%} → #figura("path", didascalia: "alt", width: 50%)
+
             img_match = re.match(
                 r'!\[([^\]]*)\]\(([^)]+)\)(?:\{([^}]+)\})?',
                 line.strip()
@@ -142,8 +221,8 @@ class MarkdownToTypstConverter:
                     if width_match:
                         width = width_match.group(1)
 
-                # Convert web URL path to Typst filesystem path
-                # /uploads/x.png → /data/uploads/x.png (for Typst compilation root)
+                # Remap web paths to Typst filesystem root
+                # /uploads/x.png → /data/uploads/x.png
                 if path.startswith('/uploads/'):
                     path = '/data' + path
 
@@ -156,37 +235,44 @@ class MarkdownToTypstConverter:
                 i += 1
                 continue
 
-            # Bold: **text** → *text*
+            # ── Inline formatting ──────────────────────────────────
+            # Order matters: bullets → numbered → bold → italic → escape → links
+
+            # Bullet lists: * item → - item
+            # MUST run before bold/italic to avoid * being parsed as formatting
+            line = re.sub(r'^(\s*)\*\s+', r'\1- ', line)
+
+            # Numbered lists: 1. item → + item
+            line = re.sub(r'^(\s*)(\d+)\.\s+', r'\1+ ', line)
+
+            # Bold: **text** → *text* (Typst bold syntax)
             line = re.sub(r'\*\*([^*]+)\*\*', r'*\1*', line)
 
-            # Italic: *text* or _text_ → _text_
-            # Note: need to be careful not to replace bold markers
+            # Italic: *text* → _text_ (Typst italic syntax)
             line = re.sub(r'(?<!\*)\*([^*]+)\*(?!\*)', r'_\1_', line)
             line = re.sub(r'_([^_]+)_', r'_\1_', line)
 
-            # Links: [text](url) → #link-geko("url", testo: "text")
+            # Safety: escape any remaining unmatched * to prevent Typst errors
+            line = self._escape_lone_asterisks(line)
+
+            # Markdown links: [text](url) → #link-geko("url", testo: "text")
             line = re.sub(
                 r'\[([^\]]+)\]\(([^)]+)\)',
                 r'#link-geko("\2", testo: "\1")',
                 line
             )
 
-            # Bare URLs: https://... or http://... → #link-geko("url")
-            # Only match URLs not already inside quotes or link-geko
+            # Bare URLs not already inside a #link-geko or quotes
             line = re.sub(
                 r'(?<!")(?<!link-geko\(")(https?://[^\s<>\"\)]+)(?!")',
                 r'#link-geko("\1")',
                 line
             )
 
-            # Bullet lists: - item → - item (same syntax)
-            # Numbered lists: 1. item → + item (typst uses + for enum)
-            line = re.sub(r'^(\s*)(\d+)\.\s+', r'\1+ ', line)
-
             result.append(line)
             i += 1
 
-        # Handle any remaining open blocks
+        # ── Flush any unclosed blocks at end of input ──────────────
         if in_blockquote:
             quote_content = '\n'.join(blockquote_lines)
             result.append(f'#quote[{quote_content}]')
@@ -195,20 +281,83 @@ class MarkdownToTypstConverter:
 
         return '\n'.join(result)
 
+    # ── Helper methods ─────────────────────────────────────────────
+
+    def _split_paragraphs(self, lines: list[str]) -> list[list[str]]:
+        """
+        Group consecutive non-empty lines into paragraphs.
+
+        Used to preserve paragraph breaks inside box-evidenza content:
+        blank lines in the input become double newlines in the output,
+        which Typst renders as separate paragraphs.
+        """
+        paragraphs = []
+        current: list[str] = []
+        for line in lines:
+            if line.strip() == '':
+                if current:
+                    paragraphs.append(current)
+                    current = []
+            else:
+                current.append(line)
+        if current:
+            paragraphs.append(current)
+        return paragraphs
+
+    def _escape_lone_asterisks(self, line: str) -> str:
+        """
+        Escape unmatched * characters that would cause Typst
+        "unclosed delimiter" compilation errors.
+
+        This is a safety net for malformed markdown (e.g. "text* more text"
+        where the author forgot the opening *). Matched pairs are left intact.
+        """
+        # Quick check: if all * are in matched pairs, nothing to do
+        stripped = re.sub(r'\*[^*]+\*', '', line)
+        if '*' not in stripped:
+            return line
+        # Walk the string, pairing asterisks greedily
+        result = []
+        i = 0
+        while i < len(line):
+            if line[i] == '*':
+                close = line.find('*', i + 1)
+                if close != -1 and close - i > 1:
+                    # Matched pair — keep as-is
+                    result.append(line[i:close + 1])
+                    i = close + 1
+                else:
+                    # Lone asterisk — escape for Typst
+                    result.append('\\*')
+                    i += 1
+            else:
+                result.append(line[i])
+                i += 1
+        return ''.join(result)
+
     def _convert_inline(self, text: str) -> str:
-        """Convert Markdown inline formatting to Typst."""
+        """
+        Convert inline Markdown formatting to Typst.
+
+        Used specifically for table cell content where the conversion
+        uses #strong[...] (bracket syntax) instead of *...* to avoid
+        conflicts with Typst table cell delimiters.
+        """
         # Bold: **text** → #strong[text]
         text = re.sub(r'\*\*([^*]+)\*\*', r'#strong[\1]', text)
-        # Italic: *text* or _text_ → _text_
+        # Italic: *text* → _text_
         text = re.sub(r'(?<!\*)\*([^*]+)\*(?!\*)', r'_\1_', text)
         return text
 
     def _format_table(self, headers: list[str], rows: list[list[str]]) -> str:
-        """Format a table as Typst #tabella-geko."""
-        # Format headers with content brackets to support inline formatting
+        """
+        Format a Markdown table as a Typst #tabella-geko() call.
+
+        Uses _convert_inline for cell content (bracket-based bold)
+        to avoid delimiter conflicts inside table content blocks.
+        """
         headers_str = ', '.join(f'[{self._convert_inline(h)}]' for h in headers)
 
-        # Format rows with content brackets
         rows_strs = []
         for row in rows:
             row_str = ', '.join(f'[{self._convert_inline(c)}]' for c in row)
@@ -222,6 +371,8 @@ class MarkdownToTypstConverter:
   )
 )'''
 
+    # ── Article wrapper ────────────────────────────────────────────
+
     def generate_article_typst(
         self,
         titolo: str,
@@ -230,18 +381,24 @@ class MarkdownToTypstConverter:
         nome: Optional[str],
         contenuto: str
     ) -> str:
-        """Generate complete article in Typst format."""
+        """
+        Wrap converted Typst content into a full article structure.
+
+        Generates:
+            = Titolo
+            #sottotitolo-sezione[...]   (if provided)
+            #autore("CALL", nome: "Nome")  (if provided)
+            <contenuto>
+            #separatore()
+        """
         parts = []
 
-        # Title (heading level 1)
         parts.append(f'= {titolo}')
         parts.append('')
 
-        # Subtitle
         if sottotitolo:
             parts.append(f'#sottotitolo-sezione[{sottotitolo}]')
 
-        # Author
         if autore:
             if nome:
                 parts.append(f'#autore("{autore}", nome: "{nome}")')
@@ -249,7 +406,6 @@ class MarkdownToTypstConverter:
                 parts.append(f'#autore("{autore}")')
         parts.append('')
 
-        # Content
         parts.append(contenuto)
         parts.append('')
         parts.append('#separatore()')

@@ -165,10 +165,12 @@ class MagazineBuilder:
 
         # Team page (if members are configured)
         if team_membri:
+            parts.append('#pagebreak()')
             parts.append(self._generate_team_page(team_membri, link_iscrizione))
             parts.append('')
 
         # Final page
+        parts.append('#pagebreak()')
         parts.append(self._generate_final_page(
             link_lista_distribuzione,
             link_donazione,
