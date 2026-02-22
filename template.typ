@@ -103,18 +103,20 @@
 // ============================================
 
 #let tabella-geko(intestazioni, righe) = {
-  table(
-    columns: intestazioni.len(),
-    fill: (col, row) => {
-      if row == 0 { geko-gold }
-      else if calc.odd(row) { geko-light }
-      else { white }
-    },
-    stroke: 0.5pt + geko-dark.lighten(60%),
-    inset: 6pt,
-    align: (col, row) => if row == 0 { center } else { left },
-    ..intestazioni.map(h => text(fill: white, weight: "bold", size: 9pt)[#h]),
-    ..righe.flatten().map(c => { set text(size: 9pt); c })
+  align(center,
+    table(
+      columns: intestazioni.len(),
+      fill: (col, row) => {
+        if row == 0 { geko-gold }
+        else if calc.odd(row) { geko-light }
+        else { white }
+      },
+      stroke: 0.5pt + geko-dark.lighten(60%),
+      inset: 6pt,
+      align: (col, row) => if row == 0 { center } else { left },
+      ..intestazioni.map(h => text(fill: white, weight: "bold", size: 9pt)[#h]),
+      ..righe.flatten().map(c => { set text(size: 9pt); c })
+    )
   )
 }
 

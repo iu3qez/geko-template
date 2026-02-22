@@ -197,8 +197,8 @@ class MarkdownToTypstConverter:
 
     def _convert_inline(self, text: str) -> str:
         """Convert Markdown inline formatting to Typst."""
-        # Bold: **text** → *text*
-        text = re.sub(r'\*\*([^*]+)\*\*', r'*\1*', text)
+        # Bold: **text** → #strong[text]
+        text = re.sub(r'\*\*([^*]+)\*\*', r'#strong[\1]', text)
         # Italic: *text* or _text_ → _text_
         text = re.sub(r'(?<!\*)\*([^*]+)\*(?!\*)', r'_\1_', text)
         return text
