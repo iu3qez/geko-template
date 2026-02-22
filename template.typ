@@ -36,6 +36,7 @@
 #let titolo-articolo(testo) = {
   v(1em)
   block(width: 100%)[
+    #set par(justify: false)
     #text(size: 16pt, weight: "bold", fill: geko-magenta, tracking: 0.5pt)[#upper(testo)]
     #v(4pt)
     #line(length: 100%, stroke: 2pt + geko-gold)
@@ -173,8 +174,10 @@
 
         #v(1.2em)
 
-        // Titolo EDITORIALE
-        #text(size: 14pt, weight: "bold", fill: geko-gold)[EDITORIALE]
+        // Titolo rivista + sottotitolo editoriale
+        #text(size: 18pt, weight: "bold", fill: geko-magenta)[Il Geko Radio Magazine]
+        #v(0.3em)
+        #text(size: 12pt, weight: "bold", fill: geko-gold)[EDITORIALE]
         #v(0.5em)
 
         #set text(size: 9pt, fill: geko-dark)
