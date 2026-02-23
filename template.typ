@@ -177,15 +177,15 @@
         // Titolo rivista + sottotitolo editoriale
         #text(size: 18pt, weight: "bold", fill: geko-magenta)[Il Geko Radio Magazine]
         #v(0.3em)
-        #text(size: 12pt, weight: "bold", fill: geko-gold)[EDITORIALE]
+        #text(size: 14pt, weight: "bold", fill: geko-gold)[EDITORIALE]
         #v(0.5em)
 
-        #set text(size: 9pt, fill: geko-dark)
+        #set text(size: 11pt, fill: geko-dark)
         #set par(justify: true, leading: 0.55em)
         #editoriale-testo
 
         #v(0.6em)
-        #text(size: 9pt, weight: "bold", fill: geko-dark)[#editoriale-autore]
+        #text(size: 11pt, weight: "bold", fill: geko-dark)[#editoriale-autore]
       ]
     ),
 
