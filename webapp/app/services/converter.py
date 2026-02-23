@@ -248,7 +248,7 @@ class MarkdownToTypstConverter:
 
             # Bold: **text** → *text* (Typst bold syntax)
             # Use placeholder to prevent italic pass from re-matching
-            line = re.sub(r'\*\*([^*]+)\*\*', r'\x00BOLD\x00\1\x00/BOLD\x00', line)
+            line = re.sub(r'\*\*([^*]+)\*\*', '\x00BOLD\x00\\1\x00/BOLD\x00', line)
 
             # Italic: *text* → _text_ (Typst italic syntax)
             line = re.sub(r'(?<!\*)\*([^*]+)\*(?!\*)', r'_\1_', line)
