@@ -169,20 +169,20 @@ class MarkdownToTypstConverter:
             # ── Table ──────────────────────────────────────────────
             # Collect | delimited rows, emit #tabella-geko when done.
 
-            if '|' in line and line.strip().startswith('|'):
+            if '|' in line and re.match(r'^\|?.+\|', line.strip()):
                 if not in_table:
                     # First row = headers
                     in_table = True
-                    table_headers = [c.strip() for c in line.strip().strip('|').split('|')]
+                    table_headers = [c.strip() for c in line.strip().strip('|').split('|') if c.strip()]
                     table_rows = []
                     i += 1
-                    # Skip separator row (|---|---|)
-                    if i < len(lines) and re.match(r'^\|[\s\-:|]+\|$', lines[i].strip()):
+                    # Skip separator row (---|---|)
+                    if i < len(lines) and re.match(r'^\|?[\s\-:|]+\|', lines[i].strip()):
                         i += 1
                     continue
                 else:
                     # Subsequent rows = data
-                    cells = [c.strip() for c in line.strip().strip('|').split('|')]
+                    cells = [c.strip() for c in line.strip().strip('|').split('|') if c.strip()]
                     table_rows.append(cells)
                     i += 1
                     continue
