@@ -37,7 +37,7 @@ RUN npm run build
 # -----------------------------------------------------------------------------
 # Stage 2: Builder - Installazione dipendenze Python
 # -----------------------------------------------------------------------------
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 # Evita creazione file .pyc e buffering output
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -57,7 +57,7 @@ RUN pip wheel --no-cache-dir --no-deps --wheel-dir /build/wheels -r requirements
 # -----------------------------------------------------------------------------
 # Stage 2: Runtime - Immagine finale
 # -----------------------------------------------------------------------------
-FROM python:3.11-slim as runtime
+FROM python:3.11-slim AS runtime
 
 # Metadata
 LABEL maintainer="GEKO Magazine Team"
