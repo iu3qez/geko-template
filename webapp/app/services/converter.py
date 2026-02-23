@@ -247,11 +247,14 @@ class MarkdownToTypstConverter:
             line = re.sub(r'^(\s*)(\d+)\.\s+', r'\1+ ', line)
 
             # Bold: **text** → *text* (Typst bold syntax)
-            line = re.sub(r'\*\*([^*]+)\*\*', r'*\1*', line)
+            # Use placeholder to prevent italic pass from re-matching
+            line = re.sub(r'\*\*([^*]+)\*\*', r'\x00BOLD\x00\1\x00/BOLD\x00', line)
 
             # Italic: *text* → _text_ (Typst italic syntax)
             line = re.sub(r'(?<!\*)\*([^*]+)\*(?!\*)', r'_\1_', line)
-            line = re.sub(r'_([^_]+)_', r'_\1_', line)
+
+            # Restore bold placeholders to Typst *...*
+            line = line.replace('\x00BOLD\x00', '*').replace('\x00/BOLD\x00', '*')
 
             # Safety: escape any remaining unmatched * to prevent Typst errors
             line = self._escape_lone_asterisks(line)

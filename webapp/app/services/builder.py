@@ -132,7 +132,7 @@ class MagazineBuilder:
   anno: "{anno}",
   immagine-principale: "{abs_copertina}",
   evidenze: {evidenze_typst},
-  editoriale-testo: [{editoriale or ""}],
+  editoriale-testo: [{(editoriale or "").replace(chr(10), chr(10) + chr(10))}],
   editoriale-autore: "{editoriale_autore or ""}",
 )''')
             parts.append('')

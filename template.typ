@@ -355,7 +355,7 @@
   set par(
     justify: true,
     leading: 0.65em,
-    spacing: 0.8em,
+    spacing: 1.1em,
     first-line-indent: 0em,
   )
 
