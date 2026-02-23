@@ -86,7 +86,7 @@
 		<div class="footer-content">
 			<p>GEKO Radio Magazine - Mountain QRP Club</p>
 			<p class="footer-links">
-				<a href="https://www.mqc.it" target="_blank" rel="noopener">mqc.it</a>
+				<a href="https://www.mountainqrp.it" target="_blank" rel="noopener">mountainqrp.it</a>
 			</p>
 		</div>
 	</footer>
