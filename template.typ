@@ -116,7 +116,15 @@
       inset: 6pt,
       align: (col, row) => if row == 0 { center } else { left },
       ..intestazioni.map(h => text(fill: white, weight: "bold", size: 9pt)[#h]),
-      ..righe.flatten().map(c => { set text(size: 9pt); c })
+      ..{
+        let cells = ()
+        for row in righe {
+          for c in row {
+            cells.push({ set text(size: 9pt); c })
+          }
+        }
+        cells
+      }
     )
   )
 }
