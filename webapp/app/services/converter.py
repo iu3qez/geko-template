@@ -364,7 +364,7 @@ class MarkdownToTypstConverter:
 
         rows_strs = []
         for row in rows:
-            row_str = ', '.join(f'[{self._convert_inline(c)}]' if c else '[ ]' for c in row)
+            row_str = ', '.join(f'[{self._convert_inline(c)}]' for c in row)
             rows_strs.append(f'    ({row_str}),')
         rows_content = '\n'.join(rows_strs)
 
