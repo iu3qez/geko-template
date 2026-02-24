@@ -173,7 +173,7 @@ class MarkdownToTypstConverter:
                 if not in_table:
                     # First row = headers
                     in_table = True
-                    table_headers = [c.strip() for c in line.strip().strip('|').split('|') if c.strip()]
+                    table_headers = [c.strip() for c in line.strip().strip('|').split('|')]
                     table_rows = []
                     i += 1
                     # Skip separator row (---|---|)
@@ -182,7 +182,7 @@ class MarkdownToTypstConverter:
                     continue
                 else:
                     # Subsequent rows = data
-                    cells = [c.strip() for c in line.strip().strip('|').split('|') if c.strip()]
+                    cells = [c.strip() for c in line.strip().strip('|').split('|')]
                     table_rows.append(cells)
                     i += 1
                     continue
