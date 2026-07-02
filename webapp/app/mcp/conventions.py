@@ -12,6 +12,11 @@ Scrivi gli articoli in Markdown. Il template li converte in Typst così:
 - `[testo](url)` e URL nudi → link stilizzato `#link-geko`.
 - `![descrizione](/uploads/foto.jpg){width=80%}` → figura con didascalia.
   I path `/uploads/...` vengono rimappati automaticamente.
+- Due o più immagini su righe consecutive (senza testo o righe vuote in
+  mezzo) → griglia a 2 colonne con didascalie. Con numero dispari l'ultima
+  foto occupa tutta la riga. Utile per articoli con molte foto.
+  Una singola immagine isolata resta a piena larghezza.
+- I blocchi di codice ``` restano letterali (nessuna conversione).
 - Liste puntate con `*` o `-`; liste numerate con `1.`.
 - `> citazione` → blocco citazione.
 - Tabelle Markdown `| a | b |` con riga separatrice → tabella GEKO.

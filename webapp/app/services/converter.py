@@ -7,11 +7,13 @@ defined in template.typ (e.g. #box-evidenza, #figura, #tabella-geko, #link-geko)
 Conversion pipeline (per-line, single pass):
   1. Block-level structures (stateful, multi-line):
      - Box evidenza (!!! admonitions)
+     - Fenced code blocks (``` — content passed through verbatim)
      - Blockquotes (> lines)
      - Tables (| delimited rows)
   2. Block-level elements (single line):
      - Headings (# → =, shifted +1 so article title stays H1)
-     - Images (![alt](src){width=X} → #figura)
+     - Images: single ![alt](src){width=X} → #figura;
+       ≥2 consecutive image lines → #grid a 2 colonne
   3. Inline formatting:
      - Bullet lists (* item → - item, must precede bold/italic)
      - Numbered lists (1. item → + item)
@@ -30,6 +32,8 @@ Markdown syntax mapping:
   [text](url)                  #link-geko("url", testo: "text")
   https://bare.url             #link-geko("https://bare.url")
   ![alt](path){width=80%}     #figura("path", didascalia: "alt", width: 80%)
+  ![a](x) + ![b](y) consec.    #grid(columns: (1fr, 1fr), ...figure...)
+  ```code fence```             passed through verbatim (Typst raw block)
   * bullet / - bullet          - bullet
   1. numbered                  + numbered
   > blockquote                 #quote[text]
@@ -58,8 +62,10 @@ class MarkdownToTypstConverter:
         )
     """
 
-    def __init__(self):
+    def __init__(self, grid_gutter: str = "8pt"):
         self.md = MarkdownIt()
+        # Gutter (column + row) for the 2-column auto-grid of consecutive images
+        self.grid_gutter = grid_gutter
 
     def convert(self, markdown_text: str) -> tuple[dict, str]:
         """
@@ -103,6 +109,8 @@ class MarkdownToTypstConverter:
         in_blockquote = False
         blockquote_lines: list[str] = []
 
+        in_fence = False
+
         i = 0
         while i < len(lines):
             line = lines[i]
@@ -143,6 +151,25 @@ class MarkdownToTypstConverter:
                     in_box = True
                     box_title = match.group(1)
                     box_content = []
+                i += 1
+                continue
+
+            # ── Fenced code blocks ─────────────────────────────────
+            # Content inside ``` fences is passed through verbatim:
+            # no markdown transform must apply (e.g. #grid must NOT
+            # become "== grid"). The fence itself is kept, so Typst
+            # renders it as a raw block.
+
+            if in_fence:
+                result.append(line)
+                if re.match(r'^\s*`{3,}\s*$', line):
+                    in_fence = False
+                i += 1
+                continue
+
+            if re.match(r'^\s*`{3,}', line):
+                in_fence = True
+                result.append(line)
                 i += 1
                 continue
 
@@ -206,33 +233,39 @@ class MarkdownToTypstConverter:
                 continue
 
             # ── Images ─────────────────────────────────────────────
-            # ![alt](path){width=50%} → #figura("path", didascalia: "alt", width: 50%)
+            # Single ![alt](path){width=50%} → #figura(...) full width.
+            # ≥2 consecutive image-only lines (no blank line or text in
+            # between) are grouped into a 2-column #grid so photo-heavy
+            # articles don't stack every figure full width.
 
+            images = self._parse_image_line(line)
+            if images is not None:
+                group = list(images)
+                j = i + 1
+                while j < len(lines):
+                    more = self._parse_image_line(lines[j])
+                    if more is None:
+                        break
+                    group.extend(more)
+                    j += 1
+                if len(group) == 1:
+                    result.append(self._format_figura(*group[0]))
+                else:
+                    result.append(self._format_figure_grid(group))
+                    result.append('')
+                i = j
+                continue
+
+            # Fallback (historical behavior): image with trailing text
+            # on the same line — emit #figura, drop the rest.
             img_match = re.match(
                 r'!\[([^\]]*)\]\(([^)]+)\)(?:\{([^}]+)\})?',
                 line.strip()
             )
             if img_match:
-                alt = img_match.group(1)
-                path = img_match.group(2)
-                attrs = img_match.group(3)
-                width = None
-                if attrs:
-                    width_match = re.search(r'width=(\d+%?)', attrs)
-                    if width_match:
-                        width = width_match.group(1)
-
-                # Remap web paths to Typst filesystem root
-                # /uploads/x.png → /data/uploads/x.png
-                if path.startswith('/uploads/'):
-                    path = '/data' + path
-
-                parts = [f'"{path}"']
-                if alt:
-                    parts.append(f'didascalia: "{alt}"')
-                if width:
-                    parts.append(f'larghezza: {width}')
-                result.append(f'#figura({", ".join(parts)})')
+                result.append(self._format_figura(
+                    img_match.group(1), img_match.group(2), img_match.group(3)
+                ))
                 i += 1
                 continue
 
@@ -286,6 +319,93 @@ class MarkdownToTypstConverter:
         return '\n'.join(result)
 
     # ── Helper methods ─────────────────────────────────────────────
+
+    # Alt text may contain one level of nested [brackets]
+    _IMG_RE = re.compile(
+        r'!\[((?:[^\[\]]|\[[^\]]*\])*)\]\(([^)]+)\)(?:\{([^}]+)\})?'
+    )
+
+    def _parse_image_line(self, line: str) -> Optional[list[tuple]]:
+        """
+        Parse a line consisting ONLY of one or more ![alt](path){attrs}
+        images (whitespace-separated).
+
+        Returns a list of (alt, path, attrs) tuples, or None if the line
+        contains anything other than images. Multiple images on the same
+        line are all kept (previously the second one was dropped).
+        """
+        stripped = line.strip()
+        if not stripped.startswith('!['):
+            return None
+        images = []
+        pos = 0
+        while pos < len(stripped):
+            match = self._IMG_RE.match(stripped, pos)
+            if not match:
+                return None
+            images.append((match.group(1), match.group(2), match.group(3)))
+            pos = match.end()
+            while pos < len(stripped) and stripped[pos] in ' \t':
+                pos += 1
+        return images
+
+    @staticmethod
+    def _remap_path(path: str) -> str:
+        """Remap web paths to Typst filesystem root (/uploads → /data/uploads)."""
+        if path.startswith('/uploads/'):
+            return '/data' + path
+        return path
+
+    def _format_figura(self, alt: str, path: str, attrs: Optional[str]) -> str:
+        """Format a single full-width image as a #figura(...) call."""
+        width = None
+        if attrs:
+            width_match = re.search(r'width=(\d+%?)', attrs)
+            if width_match:
+                width = width_match.group(1)
+
+        parts = [f'"{self._remap_path(path)}"']
+        if alt:
+            parts.append(f'didascalia: "{alt}"')
+        if width:
+            parts.append(f'larghezza: {width}')
+        return f'#figura({", ".join(parts)})'
+
+    def _format_figure_grid(self, images: list[tuple]) -> str:
+        """
+        Format ≥2 consecutive images as a 2-column #grid of figure().
+
+        With an odd number of images the last figure spans the full row
+        (grid.cell(colspan: 2)) instead of leaving an empty cell.
+        """
+        cells = []
+        for alt, path, _attrs in images:
+            fig = f'figure(image("{self._remap_path(path)}", width: 100%)'
+            if alt:
+                fig += f', caption: [{self._escape_caption(alt)}]'
+            fig += ')'
+            cells.append(fig)
+
+        if len(cells) % 2 == 1:
+            cells[-1] = f'grid.cell(colspan: 2, {cells[-1]})'
+
+        out = [
+            '#grid(',
+            '  columns: (1fr, 1fr),',
+            f'  column-gutter: {self.grid_gutter},',
+            f'  row-gutter: {self.grid_gutter},',
+        ]
+        out.extend(f'  {cell},' for cell in cells)
+        out.append(')')
+        return '\n'.join(out)
+
+    @staticmethod
+    def _escape_caption(text: str) -> str:
+        """
+        Escape Typst markup characters in a caption content block so the
+        alt text renders literally (e.g. # * _ [ ] $ \\).
+        """
+        return re.sub(r'([\\\[\]#*_$])', r'\\\1', text)
 
     def _split_paragraphs(self, lines: list[str]) -> list[list[str]]:
         """
