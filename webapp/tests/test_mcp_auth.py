@@ -49,3 +49,20 @@ def test_build_auth_none_without_env(monkeypatch):
                 "SCALEKIT_CLIENT_SECRET", "SCALEKIT_RESOURCE_ID"):
         monkeypatch.delenv(var, raising=False)
     assert auth_mod.build_auth() is None
+
+
+def test_build_auth_empty_authorization_server_falls_back(monkeypatch):
+    # Nel compose SCALEKIT_AUTHORIZATION_SERVER è presente ma vuota (${VAR:-}):
+    # build_auth deve ricadere sull'AS composto, non passare "" ad AnyHttpUrl.
+    import scalekit
+
+    monkeypatch.setattr(scalekit, "ScalekitClient", lambda **kw: object())
+    monkeypatch.setenv("SCALEKIT_ENVIRONMENT_URL", "https://org.scalekit.dev")
+    monkeypatch.setenv("SCALEKIT_CLIENT_ID", "cid")
+    monkeypatch.setenv("SCALEKIT_CLIENT_SECRET", "sec")
+    monkeypatch.setenv("SCALEKIT_RESOURCE_ID", "res_123")
+    monkeypatch.setenv("MCP_PUBLIC_URL", "https://geko-mcp.fabris.me")
+    monkeypatch.setenv("SCALEKIT_AUTHORIZATION_SERVER", "")  # presente ma vuota
+
+    provider = auth_mod.build_auth()
+    assert provider is not None  # non deve sollevare su AS vuoto

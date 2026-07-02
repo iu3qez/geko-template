@@ -70,8 +70,11 @@ def build_auth() -> Optional[RemoteAuthProvider]:
     scalekit = ScalekitClient(env_url=env_url, client_id=client_id, client_secret=client_secret)
     verifier = ScalekitTokenVerifier(scalekit=scalekit, resource_id=resource_id)
 
-    as_url = os.environ.get(
-        "SCALEKIT_AUTHORIZATION_SERVER", f"{env_url}/resources/{resource_id}"
+    # NB: nel compose la var è sempre presente ma può essere vuota (${VAR:-}),
+    # quindi `or` (non il default di .get) per ricadere sull'AS composto.
+    as_url = (
+        os.environ.get("SCALEKIT_AUTHORIZATION_SERVER")
+        or f"{env_url}/resources/{resource_id}"
     )
     return RemoteAuthProvider(
         token_verifier=verifier,
