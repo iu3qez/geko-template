@@ -109,6 +109,24 @@ route servono la SPA SvelteKit (catch-all in `main.py`).
 | `/api/config/*` | Configurazione |
 | `GET /{path}` | Catch-all: serve la SPA Svelte (`frontend/build`) |
 
+## Server MCP (articoli via Claude)
+
+Server MCP montato su `/mcp` nella stessa FastAPI (`app/mcp/`), auth OAuth 2.1
+via Scalekit (Resource Server → valida JWT; Authentik NON è usato per l'MCP).
+Host Traefik dedicato `geko-mcp.fabris.me` senza middleware Authentik.
+
+| Tool | Azione |
+|------|--------|
+| `crea_articolo` | Crea articolo da Markdown (opz. assegna a un numero) |
+| `lista_numeri` / `lista_articoli` / `leggi_articolo` | Lettura/contesto |
+| `modifica_articolo` / `assegna_a_numero` / `genera_sommario` | Modifica/assegnazione/AI |
+| `anteprima_typst` | Converte Markdown→Typst senza salvare |
+| risorsa `guida://convenzioni` | Sintassi Markdown del template |
+
+I tool riusano `app/services/article_ops.py` (stessa logica dei router `/api`).
+Env richieste: `SCALEKIT_ENVIRONMENT_URL`, `SCALEKIT_CLIENT_ID`,
+`SCALEKIT_CLIENT_SECRET`, `SCALEKIT_RESOURCE_ID`, `MCP_PUBLIC_URL`.
+
 ## Convenzioni Codice
 
 - **Lingua**: Italiano per UI/commenti, inglese per codice
