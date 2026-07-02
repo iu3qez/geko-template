@@ -57,7 +57,11 @@ def verify(token: str, *, now: int | None = None) -> dict:
         raise TokenError("token malformato") from exc
     if not hmac.compare_digest(sig, _sign(payload)):
         raise TokenError("firma non valida")
-    claims = json.loads(_b64u_decode(payload))
-    if (now if now is not None else int(time.time())) >= claims["exp"]:
+    try:
+        claims = json.loads(_b64u_decode(payload))
+        aid, name, exp = claims["aid"], claims["name"], claims["exp"]
+    except (ValueError, KeyError, TypeError) as exc:
+        raise TokenError("payload del token non valido") from exc
+    if (now if now is not None else int(time.time())) >= exp:
         raise TokenError("token scaduto")
     return claims

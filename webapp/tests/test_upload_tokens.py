@@ -41,3 +41,20 @@ def test_missing_key_rejected(monkeypatch):
     monkeypatch.delenv("GEKO_UPLOAD_SIGNING_KEY", raising=False)
     with pytest.raises(TokenError):
         upload_tokens.mint(7, "x.png", exp_epoch=2_000_000_000)
+
+
+def test_signed_but_non_json_payload_rejected():
+    from app.mcp.upload_tokens import _b64u, _sign
+    payload = _b64u(b"non-json")
+    token = f"{payload}.{_sign(payload)}"
+    with pytest.raises(TokenError):
+        upload_tokens.verify(token, now=1_000)
+
+
+def test_signed_but_missing_claim_rejected():
+    import json
+    from app.mcp.upload_tokens import _b64u, _sign
+    payload = _b64u(json.dumps({"aid": 7, "exp": 2_000_000_000}).encode())  # manca "name"
+    token = f"{payload}.{_sign(payload)}"
+    with pytest.raises(TokenError):
+        upload_tokens.verify(token, now=1_000)
