@@ -1,15 +1,15 @@
 """JSON API for articles."""
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, delete
-from sqlalchemy.orm import selectinload
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
 from ...database import get_db
-from ...models import Article, Magazine, article_magazines
+from ...models import Article
+from ...services import article_ops
 
 router = APIRouter(prefix="/articles")
 
@@ -83,43 +83,6 @@ class AssignRequest(BaseModel):
     magazine_ids: list[int]
 
 
-def article_to_response(article: Article) -> dict:
-    """Convert Article model to response dict."""
-    return {
-        "id": article.id,
-        "titolo": article.titolo,
-        "sottotitolo": article.sottotitolo or "",
-        "autore": article.autore or "",
-        "nome_autore": article.nome_autore or "",
-        "contenuto_md": article.contenuto_md or "",
-        "contenuto_typ": article.contenuto_typ or "",
-        "sommario_llm": article.sommario_llm or "",
-        "ordine": article.ordine or 0,
-        "created_at": article.created_at.isoformat() if article.created_at else None,
-        "updated_at": article.updated_at.isoformat() if article.updated_at else None,
-        "magazines": [
-            {
-                "id": m.id,
-                "numero": m.numero,
-                "mese": m.mese,
-                "anno": m.anno,
-                "stato": m.stato.value if hasattr(m.stato, 'value') else m.stato
-            }
-            for m in article.magazines
-        ],
-        "images": [
-            {
-                "id": img.id,
-                "filename": img.filename,
-                "original_filename": img.original_filename,
-                "url": img.url,
-                "alt_text": img.alt_text or ""
-            }
-            for img in article.images
-        ]
-    }
-
-
 @router.get("")
 async def list_articles(
     magazine_id: Optional[int] = None,
@@ -127,69 +90,30 @@ async def list_articles(
     db: AsyncSession = Depends(get_db)
 ):
     """List all articles with optional filters."""
-    query = select(Article).options(
-        selectinload(Article.magazines),
-        selectinload(Article.images)
-    ).order_by(Article.updated_at.desc())
-
-    if magazine_id:
-        query = query.join(Article.magazines).where(Magazine.id == magazine_id)
-
-    if search:
-        search_term = f"%{search}%"
-        query = query.where(
-            Article.titolo.ilike(search_term) |
-            Article.autore.ilike(search_term) |
-            Article.contenuto_md.ilike(search_term)
-        )
-
-    result = await db.execute(query)
-    articles = result.scalars().unique().all()
-
-    return [article_to_response(a) for a in articles]
+    return await article_ops.list_articles(db, magazine_id=magazine_id, search=search)
 
 
 @router.get("/{article_id}")
 async def get_article(article_id: int, db: AsyncSession = Depends(get_db)):
     """Get a single article by ID."""
-    query = select(Article).options(
-        selectinload(Article.magazines),
-        selectinload(Article.images)
-    ).where(Article.id == article_id)
-
-    result = await db.execute(query)
-    article = result.scalar_one_or_none()
-
-    if not article:
+    art = await article_ops.get_article(db, article_id)
+    if art is None:
         raise HTTPException(status_code=404, detail="Article not found")
-
-    return article_to_response(article)
+    return art
 
 
 @router.post("")
 async def create_article(data: ArticleCreate, db: AsyncSession = Depends(get_db)):
     """Create a new article."""
-    article = Article(
+    return await article_ops.create_article(
+        db,
         titolo=data.titolo,
+        contenuto_md=data.contenuto_md or "",
         sottotitolo=data.sottotitolo or "",
         autore=data.autore or "",
         nome_autore=data.nome_autore or "",
-        contenuto_md=data.contenuto_md or "",
-        ordine=data.ordine or 0
+        ordine=data.ordine or 0,
     )
-    db.add(article)
-    await db.commit()
-    await db.refresh(article)
-
-    # Reload with relationships
-    query = select(Article).options(
-        selectinload(Article.magazines),
-        selectinload(Article.images)
-    ).where(Article.id == article.id)
-    result = await db.execute(query)
-    article = result.scalar_one()
-
-    return article_to_response(article)
 
 
 @router.put("/{article_id}")
@@ -199,30 +123,10 @@ async def update_article(
     db: AsyncSession = Depends(get_db)
 ):
     """Update an existing article."""
-    query = select(Article).options(
-        selectinload(Article.magazines),
-        selectinload(Article.images)
-    ).where(Article.id == article_id)
-
-    result = await db.execute(query)
-    article = result.scalar_one_or_none()
-
-    if not article:
+    art = await article_ops.update_article(db, article_id, **data.model_dump(exclude_unset=True))
+    if art is None:
         raise HTTPException(status_code=404, detail="Article not found")
-
-    # Update only provided fields
-    update_data = data.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(article, key, value)
-
-    await db.commit()
-    await db.refresh(article)
-
-    # Reload with relationships
-    result = await db.execute(query)
-    article = result.scalar_one()
-
-    return article_to_response(article)
+    return art
 
 
 @router.delete("/{article_id}")
@@ -244,37 +148,15 @@ async def delete_article(article_id: int, db: AsyncSession = Depends(get_db)):
 @router.post("/{article_id}/summary")
 async def generate_summary(article_id: int, db: AsyncSession = Depends(get_db)):
     """Generate AI summary for an article."""
-    from ...services.llm import generate_article_summary
-    from ...models import Config
-
-    query = select(Article).options(
-        selectinload(Article.magazines),
-        selectinload(Article.images)
-    ).where(Article.id == article_id)
-
-    result = await db.execute(query)
-    article = result.scalar_one_or_none()
-
-    if not article:
-        raise HTTPException(status_code=404, detail="Article not found")
-
-    if not article.contenuto_md:
-        raise HTTPException(status_code=400, detail="Article has no content")
-
     try:
-        model = await Config.get(db, "claude_model")
-        result = await generate_article_summary(article.contenuto_md, article.titolo, model=model)
-        article.sommario_llm = result.get("sommario", "")
-        await db.commit()
-        await db.refresh(article)
-
-        # Reload with relationships
-        result = await db.execute(query)
-        article = result.scalar_one()
-
-        return article_to_response(article)
+        art = await article_ops.generate_summary(db, article_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    if art is None:
+        raise HTTPException(status_code=404, detail="Article not found")
+    return art
 
 
 @router.post("/{article_id}/assign")
@@ -284,33 +166,7 @@ async def assign_to_magazines(
     db: AsyncSession = Depends(get_db)
 ):
     """Assign article to magazines."""
-    query = select(Article).options(
-        selectinload(Article.magazines),
-        selectinload(Article.images)
-    ).where(Article.id == article_id)
-
-    result = await db.execute(query)
-    article = result.scalar_one_or_none()
-
-    if not article:
+    art = await article_ops.assign_article(db, article_id, data.magazine_ids)
+    if art is None:
         raise HTTPException(status_code=404, detail="Article not found")
-
-    # Clear existing assignments
-    await db.execute(
-        delete(article_magazines).where(article_magazines.c.article_id == article_id)
-    )
-
-    # Add new assignments
-    for mag_id in data.magazine_ids:
-        mag_result = await db.execute(select(Magazine).where(Magazine.id == mag_id))
-        magazine = mag_result.scalar_one_or_none()
-        if magazine:
-            article.magazines.append(magazine)
-
-    await db.commit()
-
-    # Reload with relationships
-    result = await db.execute(query)
-    article = result.scalar_one()
-
-    return article_to_response(article)
+    return art

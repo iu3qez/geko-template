@@ -33,6 +33,8 @@ Autore: GEKO Magazine Team
 Licenza: MIT
 """
 
+import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -41,13 +43,38 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from app.database import init_db
+from app.mcp.server import mcp, mcp_app, mcp_secure
 from app.routes.api import router as api_router
+
+log = logging.getLogger("geko.main")
 
 # Directory paths
 APP_DIR = Path(__file__).parent
 WEBAPP_DIR = APP_DIR.parent
 STATIC_DIR = WEBAPP_DIR / "static"
 FRONTEND_DIR = WEBAPP_DIR / "frontend" / "build"
+
+
+def mcp_should_mount(secure: bool, environment: str) -> bool:
+    """Decide se montare l'MCP.
+
+    Se l'auth Scalekit è configurata (secure=True) monta sempre. Se NON è
+    configurata, monta solo fuori produzione (comodo per test/sviluppo);
+    in produzione fallisce "chiuso": niente MCP senza autenticazione.
+    """
+    if secure:
+        return True
+    return environment.lower() != "production"
+
+
+MCP_ENABLED = mcp_should_mount(mcp_secure, os.environ.get("ENVIRONMENT", ""))
+
+if not MCP_ENABLED:
+    log.warning(
+        "MCP disabilitato: Scalekit non configurato (env mancanti) e "
+        "ENVIRONMENT=production. Impostare le variabili SCALEKIT_* / "
+        "MCP_PUBLIC_URL per abilitare l'MCP in produzione."
+    )
 
 
 @asynccontextmanager
@@ -75,9 +102,15 @@ async def lifespan(app: FastAPI):
     (WEBAPP_DIR / "typst" / "generated").mkdir(parents=True, exist_ok=True)
     print("Directory create")
 
-    print("App pronta!")
+    if MCP_ENABLED:
+        async with mcp_app.lifespan(app):
+            print("App pronta!")
 
-    yield  # L'app è in esecuzione
+            yield  # L'app è in esecuzione
+    else:
+        print("App pronta! (MCP disabilitato)")
+
+        yield  # L'app è in esecuzione
 
     # === SHUTDOWN ===
     print("Chiusura GEKO Magazine Web App...")
@@ -107,6 +140,22 @@ if IMAGES_DIR.exists():
 
 # JSON API routes
 app.include_router(api_router)
+
+# Server MCP (OAuth 2.1 via Scalekit) — montato prima del catch-all SPA.
+# Vedi MCP_ENABLED sopra: in produzione senza auth Scalekit non si monta.
+if MCP_ENABLED:
+    if mcp_secure:
+        # RFC 9728: il 401 dell'MCP annuncia (via header WWW-Authenticate,
+        # campo resource_metadata) l'URL
+        # "{MCP_PUBLIC_URL}/.well-known/oauth-protected-resource" — cioè
+        # alla RADICE del dominio pubblico, non sotto /mcp. Se registriamo
+        # le route dell'auth provider solo dentro il sub-app mcp_app (montato
+        # su /mcp), quella metadata risulta raggiungibile solo su
+        # /mcp/.well-known/oauth-protected-resource, un 404 rispetto a quanto
+        # annunciato. Le montiamo quindi ANCHE alla radice dell'app.
+        for route in mcp.auth.get_well_known_routes(mcp_path="/"):
+            app.router.routes.append(route)
+    app.mount("/mcp", mcp_app)
 
 # Mount Svelte frontend build assets
 if FRONTEND_DIR.exists() and (FRONTEND_DIR / "_app").exists():
