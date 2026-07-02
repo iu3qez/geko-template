@@ -102,6 +102,15 @@ services:
       - ./data:/app/data
     networks:
       - traefik
+    # Override: l'healthcheck dell'immagine punta a :8000 (webapp), qui l'MCP
+    # ascolta su :3003. Senza override il container resta unhealthy e Traefik
+    # non lo instrada (404). Un POST senza token risponde 401 = server vivo.
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import httpx; r=httpx.post('http://localhost:3003/mcp', headers={'Accept':'application/json, text/event-stream','Content-Type':'application/json'}, json={}); exit(0 if r.status_code in (400,401,406) else 1)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.geko-mcp-rtr.rule=Host(`geko-mcp.fabris.me`)"
