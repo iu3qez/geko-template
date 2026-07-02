@@ -42,3 +42,21 @@ async def test_list_articles_search(db):
 async def test_list_magazines(db, sample_magazine):
     mags = await article_ops.list_magazines(db)
     assert any(m["id"] == sample_magazine["id"] for m in mags)
+
+
+async def test_assign_article_replaces_previous(db):
+    m1 = await article_ops.list_magazines(db)  # ensure module import path
+    from app.models import Magazine, MagazineStatus
+    a = Magazine(numero="1", mese="G", anno="2026", stato=MagazineStatus.BOZZA)
+    b = Magazine(numero="2", mese="F", anno="2026", stato=MagazineStatus.BOZZA)
+    db.add_all([a, b]); await db.commit(); await db.refresh(a); await db.refresh(b)
+    art = await article_ops.create_article(db, titolo="X", contenuto_md="y")
+    await article_ops.assign_article(db, art["id"], [a.id])
+    updated = await article_ops.assign_article(db, art["id"], [b.id])
+    assert [m["id"] for m in updated["magazines"]] == [b.id]
+
+
+async def test_assign_article_deduplicates_ids(db, sample_magazine):
+    art = await article_ops.create_article(db, titolo="X", contenuto_md="y")
+    updated = await article_ops.assign_article(db, art["id"], [sample_magazine["id"], sample_magazine["id"]])
+    assert [m["id"] for m in updated["magazines"]] == [sample_magazine["id"]]

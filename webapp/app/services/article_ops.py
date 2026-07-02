@@ -6,10 +6,10 @@ per evitare derive tra i due percorsi.
 
 from typing import Optional
 
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from ..models import Article, Config, Magazine, article_magazines
+from ..models import Article, Config, Magazine
 
 
 def article_to_response(article: Article) -> dict:
@@ -107,7 +107,7 @@ async def list_articles(
         .options(*_ARTICLE_LOADED)
         .order_by(Article.updated_at.desc())
     )
-    if magazine_id:
+    if magazine_id is not None:
         query = query.join(Article.magazines).where(Magazine.id == magazine_id)
     if search:
         term = f"%{search}%"
@@ -147,13 +147,14 @@ async def assign_article(db, article_id: int, magazine_ids: list[int]) -> Option
     article = result.scalar_one_or_none()
     if not article:
         return None
-    await db.execute(
-        delete(article_magazines).where(article_magazines.c.article_id == article_id)
-    )
-    for mag_id in magazine_ids:
-        mag = (await db.execute(select(Magazine).where(Magazine.id == mag_id))).scalar_one_or_none()
-        if mag:
-            article.magazines.append(mag)
+    article.magazines.clear()
+    unique_ids = list(dict.fromkeys(magazine_ids))
+    if unique_ids:
+        mags = (await db.execute(select(Magazine).where(Magazine.id.in_(unique_ids)))).scalars().all()
+        by_id = {m.id: m for m in mags}
+        for mid in unique_ids:
+            if mid in by_id:
+                article.magazines.append(by_id[mid])
     await db.commit()
     return await _reload(db, article_id)
 
