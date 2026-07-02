@@ -236,6 +236,7 @@ async def delete_magazine(magazine_id: int, db: AsyncSession = Depends(get_db)):
 @router.post("/{magazine_id}/build")
 async def build_pdf(magazine_id: int, db: AsyncSession = Depends(get_db)):
     """Build PDF for a magazine."""
+    from ...services import article_ops
     from ...services.builder import build_magazine_pdf
     from ...services.converter import convert_markdown_to_typst
 
@@ -263,7 +264,12 @@ async def build_pdf(magazine_id: int, db: AsyncSession = Depends(get_db)):
             elif article.contenuto_md:
                 # Convert markdown to typst on-the-fly
                 # convert_markdown_to_typst returns (metadata, typst_content)
-                _, converted = convert_markdown_to_typst(article.contenuto_md)
+                # image_base risolve i riferimenti a immagini con nome nudo
+                # (![](x.png)) nella media library dell'articolo.
+                _, converted = convert_markdown_to_typst(
+                    article.contenuto_md,
+                    image_base=article_ops.article_image_base(article.id),
+                )
                 # Add title heading if content doesn't start with one
                 if not converted.strip().startswith(('= ', '#')):
                     content = f"= {article.titolo}\n\n{converted}"
