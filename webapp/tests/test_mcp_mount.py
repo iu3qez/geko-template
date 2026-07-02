@@ -24,3 +24,18 @@ async def test_mcp_endpoint_requires_auth_or_mounted():
         # path non gestito. Nessuno dei due deve verificarsi: la richiesta
         # deve arrivare al sub-app MCP montato.
         assert resp.status_code not in (404, 405)
+
+
+def test_mcp_mounted_before_spa_catchall():
+    """Il mount /mcp deve precedere il catch-all SPA, altrimenti la SPA
+    intercetta il traffico GET dell'MCP (incl. il discovery OAuth)."""
+    from app.main import app
+    paths = [getattr(r, "path", None) for r in app.routes]
+    assert "/mcp" in paths, "il sub-app MCP non è montato su /mcp"
+    mcp_idx = paths.index("/mcp")
+    catchall_idx = next(
+        i for i, p in enumerate(paths) if p == "/{full_path:path}"
+    )
+    assert mcp_idx < catchall_idx, (
+        "il mount /mcp deve essere registrato PRIMA del catch-all SPA"
+    )
