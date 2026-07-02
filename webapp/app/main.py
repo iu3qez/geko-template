@@ -41,6 +41,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from app.database import init_db
+from app.mcp.server import mcp_app
 from app.routes.api import router as api_router
 
 # Directory paths
@@ -75,9 +76,10 @@ async def lifespan(app: FastAPI):
     (WEBAPP_DIR / "typst" / "generated").mkdir(parents=True, exist_ok=True)
     print("Directory create")
 
-    print("App pronta!")
+    async with mcp_app.lifespan(app):
+        print("App pronta!")
 
-    yield  # L'app è in esecuzione
+        yield  # L'app è in esecuzione
 
     # === SHUTDOWN ===
     print("Chiusura GEKO Magazine Web App...")
@@ -107,6 +109,9 @@ if IMAGES_DIR.exists():
 
 # JSON API routes
 app.include_router(api_router)
+
+# Server MCP (OAuth 2.1 via Scalekit) — montato prima del catch-all SPA
+app.mount("/mcp", mcp_app)
 
 # Mount Svelte frontend build assets
 if FRONTEND_DIR.exists() and (FRONTEND_DIR / "_app").exists():
