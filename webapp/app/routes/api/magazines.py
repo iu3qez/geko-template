@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select, delete, func
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import datetime
 import os
@@ -48,8 +48,7 @@ class ArticleRef(BaseModel):
     autore: str
     ordine: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ImageRef(BaseModel):
@@ -58,8 +57,7 @@ class ImageRef(BaseModel):
     url: str
     alt_text: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MagazineResponse(BaseModel):
@@ -77,8 +75,7 @@ class MagazineResponse(BaseModel):
     articles: list[ArticleRef]
     article_count: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ReorderRequest(BaseModel):

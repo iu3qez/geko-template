@@ -1,11 +1,16 @@
 """Database models for GEKO Magazine Web App."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum, Table
 from sqlalchemy.orm import relationship, declarative_base
 import enum
 
 Base = declarative_base()
+
+
+def utcnow() -> datetime:
+    """Timestamp UTC timezone-aware (sostituisce datetime.utcnow deprecato)."""
+    return datetime.now(timezone.utc)
 
 
 # Tabella associazione many-to-many: Articoli <-> Numeri GEKO
@@ -35,8 +40,8 @@ class Magazine(Base):
     editoriale = Column(Text, default="")
     editoriale_autore = Column(String(100), default="")
     copertina_id = Column(Integer, ForeignKey("images.id"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
     # Relazione many-to-many con articoli
     articles = relationship(
@@ -61,8 +66,8 @@ class Article(Base):
     contenuto_typ = Column(Text, default="")  # typst generato
     sommario_llm = Column(Text, default="")  # generato da Claude
     ordine = Column(Integer, default=0)  # posizione di default
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
     # Relazione many-to-many con numeri GEKO
     magazines = relationship(
@@ -83,7 +88,7 @@ class Image(Base):
     path = Column(String(500), nullable=False)
     alt_text = Column(String(300), default="")  # testo alternativo/descrizione
     article_id = Column(Integer, ForeignKey("articles.id"), nullable=True)
-    uploaded_at = Column(DateTime, default=datetime.utcnow)
+    uploaded_at = Column(DateTime, default=utcnow)
 
     article = relationship("Article", back_populates="images")
 
@@ -130,7 +135,7 @@ class Config(Base):
     key = Column(String(100), primary_key=True)
     value = Column(Text, default="")
     description = Column(String(500), default="")  # descrizione per UI
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
     # Valori di default per le configurazioni
     DEFAULTS = {

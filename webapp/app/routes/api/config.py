@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from ...database import get_db
 from ...models import Config
@@ -13,8 +13,7 @@ router = APIRouter(prefix="/config")
 class ConfigUpdate(BaseModel):
     """Request body for updating configuration."""
     # Dynamic key-value pairs
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 @router.get("")

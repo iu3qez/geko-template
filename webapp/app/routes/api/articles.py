@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import datetime
 
@@ -45,8 +45,7 @@ class MagazineRef(BaseModel):
     anno: str
     stato: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ImageRef(BaseModel):
@@ -56,8 +55,7 @@ class ImageRef(BaseModel):
     url: str
     alt_text: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ArticleResponse(BaseModel):
@@ -75,8 +73,7 @@ class ArticleResponse(BaseModel):
     magazines: list[MagazineRef]
     images: list[ImageRef]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AssignRequest(BaseModel):

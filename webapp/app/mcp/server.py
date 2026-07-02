@@ -270,11 +270,11 @@ async def upload_immagine(request: Request) -> JSONResponse:
     except upload_tokens.TokenError as exc:
         return JSONResponse({"error": str(exc)}, status_code=401)
 
-    form = await request.form()
-    file = form.get("file")
-    if file is None or isinstance(file, str):
-        return JSONResponse({"error": "campo 'file' mancante"}, status_code=400)
-    content = await file.read()
+    async with request.form() as form:
+        file = form.get("file")
+        if file is None or isinstance(file, str):
+            return JSONResponse({"error": "campo 'file' mancante"}, status_code=400)
+        content = await file.read()
 
     try:
         async with async_session() as db:
