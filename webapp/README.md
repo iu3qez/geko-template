@@ -9,6 +9,7 @@ Web app per generare il **GEKO Radio Magazine** del Mountain QRP Club.
 - **Conversione** Markdown → Typst → PDF
 - **Archivio** storico numeri rivista
 - **Modalità accessibile** per utenti con difficoltà motorie
+- **Server MCP** per creare/gestire articoli e caricare immagini da Claude
 
 ## Quick Start
 
@@ -93,6 +94,44 @@ Accedi da: `http://localhost:8000/simple`
 | GET | `/magazines/{id}/pdf` | Scarica PDF |
 | POST | `/upload/markdown` | Importa file MD |
 | POST | `/upload/image` | Carica immagine |
+
+## Server MCP (articoli via Claude)
+
+L'app espone un server MCP (Model Context Protocol) con auth OAuth 2.1 via
+Scalekit, che permette a Claude di creare e gestire articoli conformi al
+template. Tool disponibili:
+
+| Tool | Azione |
+|------|--------|
+| `crea_articolo` | Crea articolo da Markdown (opz. assegna a un numero) |
+| `lista_numeri` / `lista_articoli` / `leggi_articolo` | Lettura/contesto |
+| `modifica_articolo` / `assegna_a_numero` / `genera_sommario` | Modifica / assegnazione / sommario AI |
+| `carica_immagine` / `lista_immagini` / `elimina_immagine` | Media library per-articolo (immagini) |
+| `anteprima_typst` | Converte Markdown → Typst senza salvare |
+
+### Pubblicare un articolo con figure
+
+Nel Markdown referenzia le immagini col **solo nome file**, poi caricane i byte:
+
+```
+crea_articolo(titolo="Come funziona il QMX",
+              contenuto_md="![Schema finale](QMX_schema_finale.png)\n...")
+# → restituisce l'id dell'articolo, es. 42
+carica_immagine(articolo_id=42, nome_file="QMX_schema_finale.png",
+                contenuto_base64="<byte del file in base64>")
+anteprima_typst(contenuto_md="...", articolo_id=42)   # figure risolte
+```
+
+- Le immagini sono salvate col nome esatto sotto
+  `data/uploads/articoli/{id}/{nome_file}` (scoping per articolo, così due
+  articoli possono usare lo stesso nome file senza collisioni).
+- Formati: **PNG, JPG/JPEG, GIF, WEBP, SVG** (max 10 MB); MIME dedotto
+  dall'estensione se non fornito.
+- `sovrascrivi=true` (default) rimpiazza un file con lo stesso nome;
+  `sovrascrivi=false` dà errore se esiste già.
+- I riferimenti col nome file nudo si risolvono nella media library
+  dell'articolo in anteprima (`anteprima_typst(..., articolo_id=…)`) e in fase
+  di build del numero.
 
 ## Configurazione
 

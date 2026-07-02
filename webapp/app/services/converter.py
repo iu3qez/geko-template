@@ -62,10 +62,14 @@ class MarkdownToTypstConverter:
         )
     """
 
-    def __init__(self, grid_gutter: str = "8pt"):
+    def __init__(self, grid_gutter: str = "8pt", image_base: Optional[str] = None):
         self.md = MarkdownIt()
         # Gutter (column + row) for the 2-column auto-grid of consecutive images
         self.grid_gutter = grid_gutter
+        # Base path for bare image filenames (per-article media library).
+        # When set, ![](nome.png) with a bare filename resolves to
+        # f"{image_base}/nome.png" (e.g. "/data/uploads/articoli/7").
+        self.image_base = image_base.rstrip("/") if image_base else None
 
     def convert(self, markdown_text: str) -> tuple[dict, str]:
         """
@@ -349,12 +353,28 @@ class MarkdownToTypstConverter:
                 pos += 1
         return images
 
-    @staticmethod
-    def _remap_path(path: str) -> str:
-        """Remap web paths to Typst filesystem root (/uploads → /data/uploads)."""
+    def _remap_path(self, path: str) -> str:
+        """Remap image paths for Typst.
+
+        - Web paths `/uploads/…` → Typst filesystem root `/data/uploads/…`.
+        - Bare filenames (no path) → per-article media library when
+          `image_base` is set, so #figura("nome.png") resolves in compilation.
+        """
         if path.startswith('/uploads/'):
             return '/data' + path
+        if self.image_base and self._is_bare_filename(path):
+            return f"{self.image_base}/{path}"
         return path
+
+    @staticmethod
+    def _is_bare_filename(path: str) -> bool:
+        """True for a plain filename (no absolute/relative dir, no scheme/data URI)."""
+        return (
+            not path.startswith('/')
+            and not path.startswith('data:')
+            and '://' not in path
+            and '/' not in path
+        )
 
     def _format_figura(self, alt: str, path: str, attrs: Optional[str]) -> str:
         """Format a single full-width image as a #figura(...) call."""
@@ -537,7 +557,13 @@ class MarkdownToTypstConverter:
         return '\n'.join(parts)
 
 
-def convert_markdown_to_typst(markdown_text: str) -> tuple[dict, str]:
-    """Convenience function for converting markdown to typst."""
-    converter = MarkdownToTypstConverter()
+def convert_markdown_to_typst(
+    markdown_text: str, image_base: Optional[str] = None
+) -> tuple[dict, str]:
+    """Convenience function for converting markdown to typst.
+
+    Pass `image_base` (e.g. "/data/uploads/articoli/7") to resolve bare
+    image filenames against an article's media library.
+    """
+    converter = MarkdownToTypstConverter(image_base=image_base)
     return converter.convert(markdown_text)

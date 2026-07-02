@@ -89,7 +89,15 @@ class Image(Base):
 
     @property
     def url(self):
-        """URL pubblico dell'immagine."""
+        """URL pubblico dell'immagine, derivato dal path sotto la cartella uploads.
+
+        Gestisce sia gli upload flat (`data/uploads/<file>`) sia quelli
+        con scoping per-articolo (`data/uploads/articoli/<id>/<file>`).
+        """
+        parts = (self.path or "").replace("\\", "/").split("/")
+        if "uploads" in parts:
+            i = parts.index("uploads")
+            return "/" + "/".join(parts[i:])
         return f"/uploads/{self.filename}"
 
     @property

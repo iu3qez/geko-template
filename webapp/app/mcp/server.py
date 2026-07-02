@@ -1,5 +1,6 @@
 """Server MCP GEKO: tool per creare/gestire articoli conformi al template."""
 
+import base64
 from typing import Optional
 
 from fastmcp import FastMCP
@@ -147,9 +148,63 @@ async def genera_sommario(id: int) -> dict:
 
 
 @mcp.tool
-async def anteprima_typst(contenuto_md: str) -> str:
-    """Converte il Markdown in Typst e lo restituisce, senza salvare nulla."""
-    return markdown_preview(contenuto_md)
+async def anteprima_typst(contenuto_md: str, articolo_id: Optional[int] = None) -> str:
+    """Converte il Markdown in Typst e lo restituisce, senza salvare nulla.
+
+    Con `articolo_id`, i riferimenti a immagini con nome file nudo
+    (es. `![](x.png)`) si risolvono nelle immagini caricate per quell'articolo.
+    """
+    return markdown_preview(contenuto_md, articolo_id=articolo_id)
+
+
+def _decode_base64(contenuto_base64: str) -> bytes:
+    """Decodifica base64, accettando anche un prefisso data URI."""
+    data = contenuto_base64.strip()
+    if data.startswith("data:") and "," in data:
+        data = data.split(",", 1)[1]
+    try:
+        return base64.b64decode(data, validate=True)
+    except Exception as exc:  # base64.binascii.Error e simili
+        raise ValueError("contenuto_base64 non è una stringa base64 valida") from exc
+
+
+@mcp.tool
+async def carica_immagine(
+    articolo_id: int,
+    nome_file: str,
+    contenuto_base64: str,
+    mime: str = "",
+    sovrascrivi: bool = True,
+) -> dict:
+    """Carica un'immagine legata a un articolo (max 10 MB).
+
+    `nome_file` deve combaciare col riferimento nel Markdown
+    (es. `![](x.png)` → serve `nome_file="x.png"`). Formati: PNG, JPG/JPEG,
+    GIF, WEBP, SVG. `contenuto_base64` sono i byte del file in base64 (accetta
+    anche un data URI). `mime` è dedotto dall'estensione se non fornito.
+    Con `sovrascrivi=false` un nome già esistente dà errore. Ritorna
+    {nome_file, url, bytes}.
+    """
+    content = _decode_base64(contenuto_base64)
+    async with async_session() as db:
+        return await article_ops.save_article_image(
+            db, articolo_id, nome_file, content, mime=mime, sovrascrivi=sovrascrivi
+        )
+
+
+@mcp.tool
+async def lista_immagini(articolo_id: int) -> list[dict]:
+    """Elenca le immagini caricate per un articolo (nome_file, url, bytes, mime)."""
+    async with async_session() as db:
+        return await article_ops.list_article_images(db, articolo_id)
+
+
+@mcp.tool
+async def elimina_immagine(articolo_id: int, nome_file: str) -> dict:
+    """Elimina un'immagine (file + record) caricata per un articolo."""
+    async with async_session() as db:
+        await article_ops.delete_article_image(db, articolo_id, nome_file)
+        return {"ok": True}
 
 
 @mcp.resource("guida://convenzioni")

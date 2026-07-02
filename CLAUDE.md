@@ -121,13 +121,27 @@ Host Traefik dedicato `geko-mcp.fabris.me` senza middleware Authentik.
 | `lista_numeri` / `lista_articoli` / `leggi_articolo` | Lettura/contesto |
 | `crea_numero` / `modifica_numero` / `elimina_numero` | Gestione numeri rivista (crea/aggiorna/elimina) |
 | `modifica_articolo` / `assegna_a_numero` / `genera_sommario` | Modifica/assegnazione/AI |
-| `anteprima_typst` | Converte Markdown→Typst senza salvare |
+| `carica_immagine` / `lista_immagini` / `elimina_immagine` | Media library per-articolo (upload/lista/eliminazione immagini, max 10 MB) |
+| `anteprima_typst` | Converte Markdown→Typst senza salvare (opz. `articolo_id` per risolvere le figure) |
 | risorsa `guida://convenzioni` | Sintassi Markdown del template |
 
 I tool sui numeri validano `mese` (12 nomi italiani), `anno` (4 cifre),
 `stato` (`bozza`|`pubblicato`) e l'unicità di `numero`; `elimina_numero`
 rifiuta un numero con articoli associati salvo `forza=True` (non elimina gli
 articoli). Errori segnalati sollevando `ValueError` come gli altri tool.
+
+### Immagini via MCP (media library per-articolo)
+
+`carica_immagine(articolo_id, nome_file, contenuto_base64, mime="", sovrascrivi=true)`
+salva l'immagine col **nome esatto** sotto `data/uploads/articoli/{id}/{nome_file}`
+(scoping per articolo, servita da `/uploads/articoli/{id}/{nome}`). Nel Markdown le
+figure si referenziano col **solo nome file** (`![Schema](x.png)`): i nomi nudi si
+risolvono nella media library dell'articolo tramite il parametro `image_base` di
+`MarkdownToTypstConverter` (`article_ops.article_image_base(id)`), sia in
+`anteprima_typst(..., articolo_id=…)` sia nella build del numero. Formati: PNG,
+JPG/JPEG, GIF, WEBP, SVG. Senza `image_base`/`articolo_id` il comportamento resta
+invariato (nome nudo non rimappato). Logica in `article_ops.save_article_image` /
+`list_article_images` / `delete_article_image`.
 
 I tool riusano `app/services/article_ops.py` (stessa logica dei router `/api`).
 Env richieste: `SCALEKIT_ENVIRONMENT_URL`, `SCALEKIT_CLIENT_ID`,
@@ -148,8 +162,9 @@ Env richieste: `SCALEKIT_ENVIRONMENT_URL`, `SCALEKIT_CLIENT_ID`,
 | `template.typ` | Tutti gli stili e funzioni Typst |
 | `webapp/app/services/builder.py` | Generazione PDF |
 | `webapp/app/services/llm.py` | Chiamate Anthropic API |
-| `webapp/app/services/converter.py` | Convenzioni Markdown → Typst (admonition, tabelle, figure, link) |
-| `webapp/app/routes/api/images.py` | Logica upload immagini |
+| `webapp/app/services/converter.py` | Convenzioni Markdown → Typst (admonition, tabelle, figure, link; `image_base` risolve i nomi file nudi) |
+| `webapp/app/services/article_ops.py` | Fonte unica logica articoli + media library per-articolo (`save/list/delete_article_image`) |
+| `webapp/app/routes/api/images.py` | Logica upload immagini web (flusso separato, prefisso uuid) |
 
 ## Environment Variables (webapp)
 
