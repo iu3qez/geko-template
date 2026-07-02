@@ -38,7 +38,10 @@ class ScalekitTokenVerifier(TokenVerifier):
             log.info("Validazione token fallita: %s", e)
             return None
 
-        claims = claims if isinstance(claims, dict) else {}
+        if not isinstance(claims, dict):
+            log.info("Validazione token: claim non validi (tipo inatteso)")
+            return None
+
         scope = claims.get("scope", "")
         scopes = claims.get("scopes") or (scope.split() if scope else [])
         return AccessToken(

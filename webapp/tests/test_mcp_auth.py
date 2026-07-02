@@ -6,8 +6,10 @@ from app.mcp import auth as auth_mod
 class _FakeScalekit:
     def __init__(self, ok: bool):
         self._ok = ok
+        self.last_options = None
 
     def validate_token(self, token, options=None):
+        self.last_options = options
         if not self._ok:
             raise ValueError("invalid token")
         return {"client_id": "cli_1", "scope": "mcp:tools", "exp": 9999999999}
@@ -28,6 +30,18 @@ async def test_verify_token_valid_returns_access_token(monkeypatch):
     assert tok is not None
     assert tok.client_id == "cli_1"
     assert "mcp:tools" in tok.scopes
+    assert "res_x" in verifier._scalekit.last_options.audience
+
+
+async def test_verify_token_non_dict_result_fails_closed():
+    class _WeirdScalekit:
+        def validate_token(self, token, options=None):
+            return True  # non-dict truthy
+
+    verifier = auth_mod.ScalekitTokenVerifier(
+        scalekit=_WeirdScalekit(), resource_id="res_x"
+    )
+    assert await verifier.verify_token("x") is None
 
 
 def test_build_auth_none_without_env(monkeypatch):
