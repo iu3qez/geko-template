@@ -1,12 +1,15 @@
 """Server MCP GEKO: tool per creare/gestire articoli conformi al template."""
 
 import base64
+import os
+import time
 from typing import Optional
 
 from fastmcp import FastMCP
 
 from ..database import async_session
 from ..services import article_ops
+from . import upload_tokens
 from .auth import build_auth
 from .conventions import CONVENZIONI, markdown_preview
 
@@ -205,6 +208,48 @@ async def elimina_immagine(articolo_id: int, nome_file: str) -> dict:
     async with async_session() as db:
         await article_ops.delete_article_image(db, articolo_id, nome_file)
         return {"ok": True}
+
+
+@mcp.tool
+async def ottieni_upload_url(
+    articolo_id: int,
+    nomi_file: list[str],
+    scadenza_minuti: int = 15,
+) -> list[dict]:
+    """Conia URL di upload firmati per le immagini di un articolo.
+
+    Pensato per Claude Cowork: invece del base64, l'agente carica ogni file
+    con `curl -F file=@<path-locale> "<url>"` (i byte non passano dal modello).
+    `nomi_file` sono i nomi *esatti* usati nel Markdown (es. `![](schema.png)`
+    → `"schema.png"`). Formati: PNG, JPG/JPEG, GIF, WEBP, SVG. Gli URL scadono
+    dopo `scadenza_minuti` (1-60, default 15). Ritorna
+    [{nome_file, url, scade_a}, ...].
+    """
+    if not 1 <= scadenza_minuti <= 60:
+        raise ValueError("scadenza_minuti deve essere tra 1 e 60")
+    base = os.environ.get("MCP_PUBLIC_URL", "").rstrip("/")
+    if not base:
+        raise ValueError("MCP_PUBLIC_URL non configurata")
+
+    async with async_session() as db:
+        if await article_ops.get_article(db, articolo_id) is None:
+            raise ValueError(f"Articolo {articolo_id} non trovato")
+
+    exp = int(time.time()) + scadenza_minuti * 60
+    risultati = []
+    for nome in nomi_file:
+        nome = article_ops._sanitize_nome_file(nome)
+        ext = os.path.splitext(nome)[1].lower()
+        if ext not in article_ops.ALLOWED_IMAGE_EXTENSIONS:
+            raise ValueError(
+                f"Estensione non supportata: {ext or '(nessuna)'}. "
+                f"Ammesse: {', '.join(sorted(article_ops.ALLOWED_IMAGE_EXTENSIONS))}"
+            )
+        token = upload_tokens.mint(articolo_id, nome, exp)
+        risultati.append(
+            {"nome_file": nome, "url": f"{base}/upload/immagine?token={token}", "scade_a": exp}
+        )
+    return risultati
 
 
 @mcp.resource("guida://convenzioni")
