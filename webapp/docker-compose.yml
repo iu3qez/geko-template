@@ -65,14 +65,6 @@ services:
       # Ambiente (development/production)
       - ENVIRONMENT=${ENVIRONMENT:-production}
 
-      # MCP / Scalekit (OAuth 2.1 per client Claude)
-      - SCALEKIT_ENVIRONMENT_URL=${SCALEKIT_ENVIRONMENT_URL:-}
-      - SCALEKIT_CLIENT_ID=${SCALEKIT_CLIENT_ID:-}
-      - SCALEKIT_CLIENT_SECRET=${SCALEKIT_CLIENT_SECRET:-}
-      - SCALEKIT_RESOURCE_ID=${SCALEKIT_RESOURCE_ID:-}
-      - MCP_PUBLIC_URL=${MCP_PUBLIC_URL:-https://geko-mcp.fabris.me}
-      - SCALEKIT_AUTHORIZATION_SERVER=${SCALEKIT_AUTHORIZATION_SERVER:-}
-
     # Volumi persistenti e shared
     volumes:
       # Database e file caricati (PERSISTENTE - non perdere!)
@@ -119,15 +111,38 @@ services:
         - "traefik.http.routers.geko-rtr.service=geko-svc"
         - "traefik.http.services.geko-svc.loadbalancer.server.port=8000"
 
-        # Router MCP — host dedicato, SENZA middleware Authentik (auth = Scalekit).
-        # Path ristretto a /mcp e /.well-known: nessun altro path su questo
-        # host deve raggiungere l'app (niente /api/* o SPA senza Authentik).
-        - "traefik.http.routers.geko-mcp-rtr.rule=Host(`geko-mcp.fabris.me`) && (PathPrefix(`/mcp`) || PathPrefix(`/.well-known`))"
-        - "traefik.http.routers.geko-mcp-rtr.entrypoints=websecure"
-        - "traefik.http.routers.geko-mcp-rtr.service=geko-svc"
-
     networks:
       traefik:
+
+  # ---------------------------------------------------------------------------
+  # Server MCP standalone (OAuth 2.1 via Scalekit) — host dedicato tutto-MCP.
+  # Stessa immagine della webapp, comando diverso; condivide il volume ./data
+  # (DB SQLite). NIENTE Authentik: l'OAuth lo fa Scalekit dentro l'MCP.
+  # ---------------------------------------------------------------------------
+  geko-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: geko-mcp
+    restart: unless-stopped
+    command: ["python", "-m", "app.mcp.standalone"]
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - MCP_PORT=3003
+      - SCALEKIT_ENVIRONMENT_URL=${SCALEKIT_ENVIRONMENT_URL:-}
+      - SCALEKIT_RESOURCE_ID=${SCALEKIT_RESOURCE_ID:-}
+      - MCP_PUBLIC_URL=${MCP_PUBLIC_URL:-https://geko-mcp.fabris.me/}
+    volumes:
+      - ./data:/app/data
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.geko-mcp-rtr.rule=Host(`geko-mcp.fabris.me`)"
+      - "traefik.http.routers.geko-mcp-rtr.entrypoints=websecure"
+      - "traefik.http.routers.geko-mcp-rtr.service=geko-mcp-svc"
+      - "traefik.http.services.geko-mcp-svc.loadbalancer.server.port=3003"
+      - "traefik.http.services.geko-mcp-svc.loadbalancer.server.scheme=http"
 # =============================================================================
 # Definizione Secrets
 # =============================================================================
