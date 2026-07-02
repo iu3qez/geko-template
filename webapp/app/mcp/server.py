@@ -6,6 +6,8 @@ import time
 from typing import Optional
 
 from fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 from ..database import async_session
 from ..services import article_ops
@@ -250,6 +252,36 @@ async def ottieni_upload_url(
             {"nome_file": nome, "url": f"{base}/upload/immagine?token={token}", "scade_a": exp}
         )
     return risultati
+
+
+@mcp.custom_route("/upload/immagine", methods=["POST"])
+async def upload_immagine(request: Request) -> JSONResponse:
+    """Riceve un'immagine via multipart e la salva col nome legato nel token.
+
+    Route pubblica (le custom_route FastMCP non passano dal middleware auth):
+    l'autenticazione È la firma dell'URL, coniata da `ottieni_upload_url`.
+    """
+    try:
+        claims = upload_tokens.verify(request.query_params.get("token", ""))
+    except upload_tokens.TokenError as exc:
+        # Chiave server assente → 503; token invalido/scaduto → 401.
+        status = 503 if "non configurata" in str(exc) else 401
+        return JSONResponse({"error": str(exc)}, status_code=status)
+
+    form = await request.form()
+    file = form.get("file")
+    if file is None or not hasattr(file, "read"):
+        return JSONResponse({"error": "campo 'file' mancante"}, status_code=400)
+    content = await file.read()
+
+    try:
+        async with async_session() as db:
+            res = await article_ops.save_article_image(
+                db, claims["aid"], claims["name"], content, sovrascrivi=True
+            )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return JSONResponse(res, status_code=200)
 
 
 @mcp.resource("guida://convenzioni")

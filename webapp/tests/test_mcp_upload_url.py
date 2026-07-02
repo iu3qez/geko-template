@@ -66,3 +66,56 @@ async def test_ottieni_upload_url_estensione_non_valida(patch_session):
                 "ottieni_upload_url",
                 {"articolo_id": art["id"], "nomi_file": ["malware.exe"]},
             )
+
+
+import base64
+
+import httpx
+
+# PNG 1x1 valido (stesso usato negli altri test immagini)
+PNG_BYTES = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC"
+)
+
+
+@pytest.fixture
+def uploads_tmp(tmp_path, monkeypatch):
+    monkeypatch.setattr(article_ops, "UPLOADS_DIR", tmp_path / "uploads")
+    return tmp_path / "uploads"
+
+
+async def _post_upload(token: str, filename: str, data: bytes):
+    app = server_mod.mcp.http_app()
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as ac:
+        return await ac.post(
+            "/upload/immagine",
+            params={"token": token},
+            files={"file": (filename, data, "image/png")},
+        )
+
+
+async def test_upload_immagine_happy_path(db, patch_session, uploads_tmp):
+    art = await article_ops.create_article(db, titolo="QMX", contenuto_md="![s](x.png)")
+    token = upload_tokens.mint(art["id"], "x.png", exp_epoch=2_000_000_000)
+    resp = await _post_upload(token, "qualsiasi-nome-locale.png", PNG_BYTES)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["nome_file"] == "x.png"
+    assert body["url"] == f"/uploads/articoli/{art['id']}/x.png"
+    assert (uploads_tmp / "articoli" / str(art["id"]) / "x.png").read_bytes() == PNG_BYTES
+
+
+async def test_upload_immagine_token_invalido(db, patch_session, uploads_tmp):
+    resp = await _post_upload("token.fasullo", "x.png", PNG_BYTES)
+    assert resp.status_code == 401
+
+
+async def test_upload_immagine_file_mancante(db, patch_session, uploads_tmp):
+    art = await article_ops.create_article(db, titolo="QMX", contenuto_md="x")
+    token = upload_tokens.mint(art["id"], "x.png", exp_epoch=2_000_000_000)
+    app = server_mod.mcp.http_app()
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.post("/upload/immagine", params={"token": token})
+    assert resp.status_code == 400
