@@ -14,22 +14,25 @@ geko-template/
 ├── output/               # PDF generati
 └── webapp/               # Applicazione web FastAPI
     ├── app/
-    │   ├── main.py           # Entry point FastAPI
+    │   ├── main.py           # Entry point FastAPI (JSON API + serve SPA Svelte)
     │   ├── models.py         # SQLAlchemy models
     │   ├── database.py       # DB setup (SQLite async)
     │   ├── routes/
-    │   │   ├── articles.py   # CRUD articoli
-    │   │   ├── magazines.py  # Gestione numeri rivista
-    │   │   ├── upload.py     # Upload file/immagini
-    │   │   └── config.py     # Configurazione
-    │   ├── services/
-    │   │   ├── builder.py    # Generazione PDF via Typst
-    │   │   ├── converter.py  # Conversione Markdown → Typst
-    │   │   └── llm.py        # Integrazione Anthropic API
-    │   └── templates/        # Jinja2 templates
-    ├── static/               # CSS, JS
-    ├── data/                 # DB SQLite, uploads
-    └── docker-compose.yml
+    │   │   └── api/          # Router JSON montato su /api
+    │   │       ├── articles.py    # CRUD articoli (/api/articles)
+    │   │       ├── magazines.py   # Gestione numeri rivista (/api/magazines)
+    │   │       ├── images.py      # Upload/gestione immagini (/api/images)
+    │   │       └── config.py      # Configurazione (/api/config)
+    │   └── services/
+    │       ├── builder.py    # Generazione PDF via Typst
+    │       ├── converter.py  # Conversione Markdown → Typst
+    │       └── llm.py        # Integrazione Anthropic API
+    ├── frontend/             # SPA SvelteKit (Svelte 5 + TS, adapter-static)
+    │   └── build/            # Output build servito dalla FastAPI
+    ├── static/               # Asset statici legacy
+    ├── data/                 # DB SQLite, uploads, output PDF
+    ├── docker-compose.yml         # Sviluppo
+    └── docker-compose.prod.yml    # Produzione
 ```
 
 ## Tech Stack
@@ -38,7 +41,7 @@ geko-template/
 |-------|------------|
 | Template | Typst |
 | Backend | FastAPI, SQLAlchemy (async), aiosqlite |
-| Frontend | Jinja2, vanilla JS/CSS |
+| Frontend | SvelteKit (Svelte 5, TypeScript), adapter-static |
 | LLM | Anthropic Claude API |
 | Build | Python typst package |
 | Deploy | Docker |
@@ -94,15 +97,17 @@ docker-compose -f docker-compose.prod.yml up -d  # produzione
 
 ## Webapp Routes
 
+JSON API sotto il prefisso `/api` (vedi `app/routes/api/`). Tutte le altre
+route servono la SPA SvelteKit (catch-all in `main.py`).
+
 | Endpoint | Descrizione |
 |----------|-------------|
-| `GET /` | Homepage |
-| `GET /simple` | Modalità semplice/accessibile |
 | `GET /health` | Health check |
-| `/articles/*` | CRUD articoli |
-| `/magazines/*` | Gestione numeri rivista |
-| `/upload/*` | Upload file |
-| `/config/*` | Configurazione |
+| `/api/articles/*` | CRUD articoli, sommari AI, assegnazione a numeri |
+| `/api/magazines/*` | Gestione numeri rivista |
+| `/api/images/*` | Upload/gestione immagini |
+| `/api/config/*` | Configurazione |
+| `GET /{path}` | Catch-all: serve la SPA Svelte (`frontend/build`) |
 
 ## Convenzioni Codice
 
@@ -118,7 +123,8 @@ docker-compose -f docker-compose.prod.yml up -d  # produzione
 | `template.typ` | Tutti gli stili e funzioni Typst |
 | `webapp/app/services/builder.py` | Generazione PDF |
 | `webapp/app/services/llm.py` | Chiamate Anthropic API |
-| `webapp/app/routes/upload.py` | Logica upload complessa |
+| `webapp/app/services/converter.py` | Convenzioni Markdown → Typst (admonition, tabelle, figure, link) |
+| `webapp/app/routes/api/images.py` | Logica upload immagini |
 
 ## Environment Variables (webapp)
 
