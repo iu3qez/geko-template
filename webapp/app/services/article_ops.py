@@ -132,8 +132,36 @@ async def _reload(db, article_id: int) -> Optional[dict]:
 
 
 async def list_magazines(db) -> list[dict]:
-    result = await db.execute(select(Magazine).order_by(Magazine.numero.desc()))
+    result = await db.execute(
+        select(Magazine).order_by(Magazine.anno.desc(), Magazine.numero.desc())
+    )
     return [magazine_to_response(m) for m in result.scalars().all()]
+
+
+async def update_magazine(db, magazine_id: int, **fields) -> Optional[dict]:
+    """Aggiorna i campi passati di un numero. None se non esiste."""
+    result = await db.execute(select(Magazine).where(Magazine.id == magazine_id))
+    magazine = result.scalar_one_or_none()
+    if not magazine:
+        return None
+    to_validate = {
+        k: v for k, v in fields.items()
+        if k in {"numero", "mese", "anno", "stato"} and v is not None
+    }
+    cleaned = _validate_magazine_fields(**to_validate)
+    if "numero" in cleaned and cleaned["numero"] != magazine.numero:
+        dup = await db.execute(
+            select(Magazine).where(
+                Magazine.numero == cleaned["numero"], Magazine.id != magazine_id
+            )
+        )
+        if dup.scalar_one_or_none() is not None:
+            raise ValueError(f"Numero già esistente: {cleaned['numero']}")
+    for key, value in cleaned.items():
+        setattr(magazine, key, value)
+    await db.commit()
+    await db.refresh(magazine)
+    return magazine_to_response(magazine)
 
 
 async def create_article(
