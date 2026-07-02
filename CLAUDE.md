@@ -119,9 +119,15 @@ Host Traefik dedicato `geko-mcp.fabris.me` senza middleware Authentik.
 |------|--------|
 | `crea_articolo` | Crea articolo da Markdown (opz. assegna a un numero) |
 | `lista_numeri` / `lista_articoli` / `leggi_articolo` | Lettura/contesto |
+| `crea_numero` / `modifica_numero` / `elimina_numero` | Gestione numeri rivista (crea/aggiorna/elimina) |
 | `modifica_articolo` / `assegna_a_numero` / `genera_sommario` | Modifica/assegnazione/AI |
 | `anteprima_typst` | Converte Markdown→Typst senza salvare |
 | risorsa `guida://convenzioni` | Sintassi Markdown del template |
+
+I tool sui numeri validano `mese` (12 nomi italiani), `anno` (4 cifre),
+`stato` (`bozza`|`pubblicato`) e l'unicità di `numero`; `elimina_numero`
+rifiuta un numero con articoli associati salvo `forza=True` (non elimina gli
+articoli). Errori segnalati sollevando `ValueError` come gli altri tool.
 
 I tool riusano `app/services/article_ops.py` (stessa logica dei router `/api`).
 Env richieste: `SCALEKIT_ENVIRONMENT_URL`, `SCALEKIT_CLIENT_ID`,

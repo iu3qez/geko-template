@@ -92,6 +92,51 @@ async def assegna_a_numero(id: int, numero_ids: list[int]) -> dict:
 
 
 @mcp.tool
+async def crea_numero(numero: str, mese: str, anno: str, stato: str = "bozza") -> dict:
+    """Crea un nuovo numero della rivista.
+
+    `mese` in italiano (es. "Luglio"), `anno` a 4 cifre, `stato` = bozza|pubblicato
+    (default bozza). Ritorna il record creato (id, numero, mese, anno, stato).
+    """
+    async with async_session() as db:
+        return await article_ops.create_magazine(
+            db, numero=numero, mese=mese, anno=anno, stato=stato
+        )
+
+
+@mcp.tool
+async def modifica_numero(
+    id: int,
+    numero: Optional[str] = None,
+    mese: Optional[str] = None,
+    anno: Optional[str] = None,
+    stato: Optional[str] = None,
+) -> dict:
+    """Aggiorna i campi indicati di un numero esistente (id, numero, mese, anno, stato)."""
+    fields = {k: v for k, v in {
+        "numero": numero, "mese": mese, "anno": anno, "stato": stato,
+    }.items() if v is not None}
+    async with async_session() as db:
+        mag = await article_ops.update_magazine(db, id, **fields)
+        if mag is None:
+            raise ValueError(f"Numero {id} non trovato")
+        return mag
+
+
+@mcp.tool
+async def elimina_numero(id: int, forza: bool = False) -> dict:
+    """Elimina un numero. Fallisce se ha articoli associati (usa forza=True).
+
+    Non elimina gli articoli, solo le associazioni al numero.
+    """
+    async with async_session() as db:
+        ok = await article_ops.delete_magazine(db, id, forza=forza)
+        if ok is None:
+            raise ValueError(f"Numero {id} non trovato")
+        return {"eliminato": id}
+
+
+@mcp.tool
 async def genera_sommario(id: int) -> dict:
     """Genera il sommario AI dell'articolo (richiede ANTHROPIC_API_KEY)."""
     async with async_session() as db:

@@ -172,6 +172,44 @@ Assicurati che `template.typ` sia nella stessa cartella del documento.
 **Immagine non trovata:**
 Usa path relativi alla cartella del documento: `assets/foto.jpg`
 
+## 🌐 Webapp & Server MCP
+
+Oltre al template, il repo include una **webapp** (`webapp/`) per redigere gli
+articoli e generare i numeri della rivista senza scrivere Typst a mano.
+
+- **Backend:** FastAPI + SQLAlchemy async (SQLite) — API JSON sotto `/api`.
+- **Frontend:** SPA SvelteKit (Svelte 5 + TypeScript).
+- **AI:** sommari degli articoli via Anthropic Claude API.
+
+```bash
+cd webapp
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000   # http://localhost:8000
+# oppure: docker-compose up -d
+```
+
+### Server MCP (articoli e numeri via Claude)
+
+Un **server MCP** (OAuth 2.1 via Scalekit) espone gli stessi flussi come tool
+usabili direttamente da Claude. I tool riusano `app/services/article_ops.py`,
+stessa logica dei router `/api`.
+
+| Tool | Azione |
+|------|--------|
+| `crea_articolo` | Crea articolo da Markdown (opz. assegna a un numero) |
+| `lista_numeri` / `lista_articoli` / `leggi_articolo` | Lettura/contesto |
+| `crea_numero` / `modifica_numero` / `elimina_numero` | Gestione numeri rivista (crea/aggiorna/elimina) |
+| `modifica_articolo` / `assegna_a_numero` / `genera_sommario` | Modifica/assegnazione/AI |
+| `anteprima_typst` | Converte Markdown→Typst senza salvare |
+| risorsa `guida://convenzioni` | Sintassi Markdown del template |
+
+I tool sui numeri validano `mese` (12 nomi italiani), `anno` (4 cifre) e
+`stato` (`bozza`|`pubblicato`), e rifiutano un `numero` duplicato.
+`elimina_numero` blocca l'eliminazione di un numero con articoli associati
+salvo `forza=True` (gli articoli non vengono mai eliminati).
+
+Dettagli di sviluppo e variabili d'ambiente: vedi [CLAUDE.md](CLAUDE.md).
+
 ## 📄 Licenza
 
 MIT License - Vedi [LICENSE](LICENSE)

@@ -73,3 +73,84 @@ async def test_assign_article_deduplicates_ids(db, sample_magazine):
     art = await article_ops.create_article(db, titolo="X", contenuto_md="y")
     updated = await article_ops.assign_article(db, art["id"], [sample_magazine["id"], sample_magazine["id"]])
     assert [m["id"] for m in updated["magazines"]] == [sample_magazine["id"]]
+
+
+async def test_create_magazine_defaults_to_bozza(db):
+    mag = await article_ops.create_magazine(db, numero="68", mese="Luglio", anno="2026")
+    assert mag["id"] > 0
+    assert mag["numero"] == "68"
+    assert mag["mese"] == "Luglio"
+    assert mag["stato"] == "bozza"
+
+
+async def test_create_magazine_normalizes_month(db):
+    mag = await article_ops.create_magazine(db, numero="70", mese="luglio", anno="2026")
+    assert mag["mese"] == "Luglio"
+
+
+async def test_create_magazine_rejects_invalid_month(db):
+    with pytest.raises(ValueError):
+        await article_ops.create_magazine(db, numero="71", mese="Luglioo", anno="2026")
+
+
+async def test_create_magazine_rejects_invalid_year(db):
+    with pytest.raises(ValueError):
+        await article_ops.create_magazine(db, numero="72", mese="Luglio", anno="26")
+
+
+async def test_create_magazine_rejects_duplicate_numero(db):
+    await article_ops.create_magazine(db, numero="73", mese="Luglio", anno="2026")
+    with pytest.raises(ValueError):
+        await article_ops.create_magazine(db, numero="73", mese="Agosto", anno="2026")
+    mags = await article_ops.list_magazines(db)
+    assert sum(1 for m in mags if m["numero"] == "73") == 1
+
+
+async def test_update_magazine_changes_stato(db, sample_magazine):
+    updated = await article_ops.update_magazine(db, sample_magazine["id"], stato="pubblicato")
+    assert updated["stato"] == "pubblicato"
+    mags = await article_ops.list_magazines(db)
+    assert next(m for m in mags if m["id"] == sample_magazine["id"])["stato"] == "pubblicato"
+
+
+async def test_update_magazine_missing_returns_none(db):
+    assert await article_ops.update_magazine(db, 999, stato="pubblicato") is None
+
+
+async def test_update_magazine_rejects_duplicate_numero(db):
+    await article_ops.create_magazine(db, numero="80", mese="Gennaio", anno="2026")
+    b = await article_ops.create_magazine(db, numero="81", mese="Febbraio", anno="2026")
+    with pytest.raises(ValueError):
+        await article_ops.update_magazine(db, b["id"], numero="80")
+
+
+async def test_list_magazines_orders_by_year_desc(db):
+    await article_ops.create_magazine(db, numero="60", mese="Gennaio", anno="2025")
+    await article_ops.create_magazine(db, numero="61", mese="Gennaio", anno="2026")
+    mags = await article_ops.list_magazines(db)
+    annos = [m["anno"] for m in mags]
+    assert annos == sorted(annos, reverse=True)
+
+
+async def test_delete_magazine_without_articles(db, sample_magazine):
+    assert await article_ops.delete_magazine(db, sample_magazine["id"]) is True
+    mags = await article_ops.list_magazines(db)
+    assert all(m["id"] != sample_magazine["id"] for m in mags)
+
+
+async def test_delete_magazine_missing_returns_none(db):
+    assert await article_ops.delete_magazine(db, 999) is None
+
+
+async def test_delete_magazine_with_articles_requires_forza(db, sample_magazine):
+    art = await article_ops.create_article(db, titolo="X", contenuto_md="y")
+    await article_ops.assign_article(db, art["id"], [sample_magazine["id"]])
+    with pytest.raises(ValueError):
+        await article_ops.delete_magazine(db, sample_magazine["id"])
+
+
+async def test_delete_magazine_forza_keeps_article(db, sample_magazine):
+    art = await article_ops.create_article(db, titolo="X", contenuto_md="y")
+    await article_ops.assign_article(db, art["id"], [sample_magazine["id"]])
+    assert await article_ops.delete_magazine(db, sample_magazine["id"], forza=True) is True
+    assert await article_ops.get_article(db, art["id"]) is not None

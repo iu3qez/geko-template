@@ -4,12 +4,13 @@ Unica fonte di verità usata sia dai router JSON (/api) sia dai tool MCP,
 per evitare derive tra i due percorsi.
 """
 
+import re
 from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from ..models import Article, Config, Magazine
+from ..models import Article, Config, Magazine, MagazineStatus
 
 
 def article_to_response(article: Article) -> dict:
@@ -60,6 +61,66 @@ def magazine_to_response(magazine: Magazine) -> dict:
     }
 
 
+_MESI_IT = [
+    "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+    "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre",
+]
+_MESI_LOOKUP = {m.lower(): m for m in _MESI_IT}
+_STATI_VALIDI = {s.value for s in MagazineStatus}
+
+
+def _validate_magazine_fields(*, numero=None, mese=None, anno=None, stato=None) -> dict:
+    """Valida i campi passati (non-None) di un numero e li normalizza.
+
+    Ritorna un dict coi soli campi passati; `stato` diventa MagazineStatus.
+    Solleva ValueError con messaggio italiano su input non valido.
+    """
+    cleaned = {}
+    if numero is not None:
+        numero = str(numero).strip()
+        if not numero:
+            raise ValueError("Il numero non può essere vuoto")
+        cleaned["numero"] = numero
+    if mese is not None:
+        normalizzato = _MESI_LOOKUP.get(str(mese).strip().lower())
+        if normalizzato is None:
+            raise ValueError(
+                f"Mese non valido: '{mese}'. Valori ammessi: {', '.join(_MESI_IT)}"
+            )
+        cleaned["mese"] = normalizzato
+    if anno is not None:
+        anno = str(anno).strip()
+        if not re.fullmatch(r"\d{4}", anno):
+            raise ValueError(f"Anno non valido: '{anno}' (devono essere 4 cifre)")
+        cleaned["anno"] = anno
+    if stato is not None:
+        stato = str(stato).strip().lower()
+        if stato not in _STATI_VALIDI:
+            raise ValueError(
+                f"Stato non valido: '{stato}'. Valori ammessi: {', '.join(sorted(_STATI_VALIDI))}"
+            )
+        cleaned["stato"] = MagazineStatus(stato)
+    return cleaned
+
+
+async def create_magazine(db, *, numero: str, mese: str, anno: str, stato: str = "bozza") -> dict:
+    """Crea un numero della rivista. Solleva ValueError su validazione/duplicato."""
+    cleaned = _validate_magazine_fields(numero=numero, mese=mese, anno=anno, stato=stato)
+    existing = await db.execute(select(Magazine).where(Magazine.numero == cleaned["numero"]))
+    if existing.scalar_one_or_none() is not None:
+        raise ValueError(f"Numero già esistente: {cleaned['numero']}")
+    magazine = Magazine(
+        numero=cleaned["numero"],
+        mese=cleaned["mese"],
+        anno=cleaned["anno"],
+        stato=cleaned["stato"],
+    )
+    db.add(magazine)
+    await db.commit()
+    await db.refresh(magazine)
+    return magazine_to_response(magazine)
+
+
 _ARTICLE_LOADED = (selectinload(Article.magazines), selectinload(Article.images))
 
 
@@ -71,8 +132,59 @@ async def _reload(db, article_id: int) -> Optional[dict]:
 
 
 async def list_magazines(db) -> list[dict]:
-    result = await db.execute(select(Magazine).order_by(Magazine.numero.desc()))
+    result = await db.execute(
+        select(Magazine).order_by(Magazine.anno.desc(), Magazine.numero.desc())
+    )
     return [magazine_to_response(m) for m in result.scalars().all()]
+
+
+async def update_magazine(db, magazine_id: int, **fields) -> Optional[dict]:
+    """Aggiorna i campi passati di un numero. None se non esiste."""
+    result = await db.execute(select(Magazine).where(Magazine.id == magazine_id))
+    magazine = result.scalar_one_or_none()
+    if not magazine:
+        return None
+    to_validate = {
+        k: v for k, v in fields.items()
+        if k in {"numero", "mese", "anno", "stato"} and v is not None
+    }
+    cleaned = _validate_magazine_fields(**to_validate)
+    if "numero" in cleaned and cleaned["numero"] != magazine.numero:
+        dup = await db.execute(
+            select(Magazine).where(
+                Magazine.numero == cleaned["numero"], Magazine.id != magazine_id
+            )
+        )
+        if dup.scalar_one_or_none() is not None:
+            raise ValueError(f"Numero già esistente: {cleaned['numero']}")
+    for key, value in cleaned.items():
+        setattr(magazine, key, value)
+    await db.commit()
+    await db.refresh(magazine)
+    return magazine_to_response(magazine)
+
+
+async def delete_magazine(db, magazine_id: int, *, forza: bool = False) -> Optional[bool]:
+    """Elimina un numero. None se non esiste. ValueError se ha articoli e non `forza`.
+
+    Non elimina a cascata gli articoli: rimuove solo le associazioni M2M.
+    """
+    result = await db.execute(
+        select(Magazine)
+        .options(selectinload(Magazine.articles))
+        .where(Magazine.id == magazine_id)
+    )
+    magazine = result.scalar_one_or_none()
+    if not magazine:
+        return None
+    if magazine.articles and not forza:
+        raise ValueError(
+            f"Il numero {magazine.numero} ha {len(magazine.articles)} articoli associati; "
+            "usa forza=True per eliminarlo"
+        )
+    await db.delete(magazine)
+    await db.commit()
+    return True
 
 
 async def create_article(
