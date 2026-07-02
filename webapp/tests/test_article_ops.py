@@ -130,3 +130,27 @@ async def test_list_magazines_orders_by_year_desc(db):
     mags = await article_ops.list_magazines(db)
     annos = [m["anno"] for m in mags]
     assert annos == sorted(annos, reverse=True)
+
+
+async def test_delete_magazine_without_articles(db, sample_magazine):
+    assert await article_ops.delete_magazine(db, sample_magazine["id"]) is True
+    mags = await article_ops.list_magazines(db)
+    assert all(m["id"] != sample_magazine["id"] for m in mags)
+
+
+async def test_delete_magazine_missing_returns_none(db):
+    assert await article_ops.delete_magazine(db, 999) is None
+
+
+async def test_delete_magazine_with_articles_requires_forza(db, sample_magazine):
+    art = await article_ops.create_article(db, titolo="X", contenuto_md="y")
+    await article_ops.assign_article(db, art["id"], [sample_magazine["id"]])
+    with pytest.raises(ValueError):
+        await article_ops.delete_magazine(db, sample_magazine["id"])
+
+
+async def test_delete_magazine_forza_keeps_article(db, sample_magazine):
+    art = await article_ops.create_article(db, titolo="X", contenuto_md="y")
+    await article_ops.assign_article(db, art["id"], [sample_magazine["id"]])
+    assert await article_ops.delete_magazine(db, sample_magazine["id"], forza=True) is True
+    assert await article_ops.get_article(db, art["id"]) is not None

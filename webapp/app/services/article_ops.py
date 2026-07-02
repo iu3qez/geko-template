@@ -164,6 +164,29 @@ async def update_magazine(db, magazine_id: int, **fields) -> Optional[dict]:
     return magazine_to_response(magazine)
 
 
+async def delete_magazine(db, magazine_id: int, *, forza: bool = False) -> Optional[bool]:
+    """Elimina un numero. None se non esiste. ValueError se ha articoli e non `forza`.
+
+    Non elimina a cascata gli articoli: rimuove solo le associazioni M2M.
+    """
+    result = await db.execute(
+        select(Magazine)
+        .options(selectinload(Magazine.articles))
+        .where(Magazine.id == magazine_id)
+    )
+    magazine = result.scalar_one_or_none()
+    if not magazine:
+        return None
+    if magazine.articles and not forza:
+        raise ValueError(
+            f"Il numero {magazine.numero} ha {len(magazine.articles)} articoli associati; "
+            "usa forza=True per eliminarlo"
+        )
+    await db.delete(magazine)
+    await db.commit()
+    return True
+
+
 async def create_article(
     db,
     *,
