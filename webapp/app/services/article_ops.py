@@ -135,7 +135,7 @@ async def update_article(db, article_id: int, **fields) -> Optional[dict]:
         "contenuto_md", "sommario_llm", "ordine",
     }
     for key, value in fields.items():
-        if key in allowed and value is not None:
+        if key in allowed:
             setattr(article, key, value)
     await db.commit()
     return await _reload(db, article_id)

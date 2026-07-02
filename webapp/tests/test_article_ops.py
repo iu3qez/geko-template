@@ -31,6 +31,20 @@ async def test_update_article_changes_fields(db):
     assert updated["titolo"] == "Nuovo"
 
 
+async def test_update_article_leaves_unpassed_fields(db):
+    art = await article_ops.create_article(db, titolo="T", contenuto_md="y", sottotitolo="S")
+    updated = await article_ops.update_article(db, art["id"], titolo="T2")
+    assert updated["titolo"] == "T2"
+    assert updated["sottotitolo"] == "S"  # not passed -> unchanged
+
+
+async def test_update_article_applies_explicit_none(db):
+    art = await article_ops.create_article(db, titolo="T", contenuto_md="y", sottotitolo="S")
+    updated = await article_ops.update_article(db, art["id"], sottotitolo=None)
+    # None is now applied (column set NULL), serialized back as "" by article_to_response
+    assert updated["sottotitolo"] == ""
+
+
 async def test_list_articles_search(db):
     await article_ops.create_article(db, titolo="Antenna EFHW", contenuto_md="y")
     await article_ops.create_article(db, titolo="Batterie LiFePO4", contenuto_md="y")
