@@ -1,5 +1,6 @@
 import pytest
 from fastmcp import Client
+from fastmcp.exceptions import ToolError
 
 import app.mcp.server as server_mod
 
@@ -40,3 +41,22 @@ async def test_guida_convenzioni_resource(patch_session):
     async with Client(server_mod.mcp) as client:
         content = await client.read_resource("guida://convenzioni")
         assert "box-evidenza" in content[0].text
+
+
+async def test_modifica_articolo_leaves_other_fields(patch_session):
+    async with Client(server_mod.mcp) as client:
+        created = (await client.call_tool(
+            "crea_articolo",
+            {"titolo": "T", "contenuto_md": "y", "sottotitolo": "S"},
+        )).data
+        updated = (await client.call_tool(
+            "modifica_articolo", {"id": created["id"], "titolo": "T2"}
+        )).data
+        assert updated["titolo"] == "T2"
+        assert updated["sottotitolo"] == "S"  # non passato -> deve restare intatto
+
+
+async def test_leggi_articolo_missing_raises(patch_session):
+    async with Client(server_mod.mcp) as client:
+        with pytest.raises(ToolError):
+            await client.call_tool("leggi_articolo", {"id": 999999})
