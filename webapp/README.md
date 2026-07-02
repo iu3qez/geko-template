@@ -107,6 +107,7 @@ template. Tool disponibili:
 | `lista_numeri` / `lista_articoli` / `leggi_articolo` | Lettura/contesto |
 | `modifica_articolo` / `assegna_a_numero` / `genera_sommario` | Modifica / assegnazione / sommario AI |
 | `carica_immagine` / `lista_immagini` / `elimina_immagine` | Media library per-articolo (immagini) |
+| `ottieni_upload_url` | Conia URL firmati per upload immagini via `curl -F` (per Cowork, no base64) |
 | `anteprima_typst` | Converte Markdown → Typst senza salvare |
 
 ### Pubblicare un articolo con figure

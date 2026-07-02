@@ -132,6 +132,7 @@ services:
       - SCALEKIT_ENVIRONMENT_URL=${SCALEKIT_ENVIRONMENT_URL:-}
       - SCALEKIT_RESOURCE_ID=${SCALEKIT_RESOURCE_ID:-}
       - MCP_PUBLIC_URL=${MCP_PUBLIC_URL:-https://geko-mcp.fabris.me/}
+      - GEKO_UPLOAD_SIGNING_KEY=${GEKO_UPLOAD_SIGNING_KEY:-}
     volumes:
       - ./data:/app/data
     networks:

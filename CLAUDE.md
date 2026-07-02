@@ -122,6 +122,7 @@ Host Traefik dedicato `geko-mcp.fabris.me` senza middleware Authentik.
 | `crea_numero` / `modifica_numero` / `elimina_numero` | Gestione numeri rivista (crea/aggiorna/elimina) |
 | `modifica_articolo` / `assegna_a_numero` / `genera_sommario` | Modifica/assegnazione/AI |
 | `carica_immagine` / `lista_immagini` / `elimina_immagine` | Media library per-articolo (upload/lista/eliminazione immagini, max 10 MB) |
+| `ottieni_upload_url` | Conia URL firmati per upload immagini via `curl -F` (per Cowork, no base64) |
 | `anteprima_typst` | Converte Markdown→Typst senza salvare (opz. `articolo_id` per risolvere le figure) |
 | risorsa `guida://convenzioni` | Sintassi Markdown del template |
 
@@ -146,6 +147,19 @@ invariato (nome nudo non rimappato). Logica in `article_ops.save_article_image` 
 I tool riusano `app/services/article_ops.py` (stessa logica dei router `/api`).
 Env richieste: `SCALEKIT_ENVIRONMENT_URL`, `SCALEKIT_CLIENT_ID`,
 `SCALEKIT_CLIENT_SECRET`, `SCALEKIT_RESOURCE_ID`, `MCP_PUBLIC_URL`.
+
+### Upload da Cowork (URL firmato, no base64)
+
+Quando l'agente ha i file in locale (Cowork) il base64 è impraticabile:
+`ottieni_upload_url(articolo_id, nomi_file=[...])` conia un URL firmato HMAC
+per nome file; l'agente carica con `curl -F file=@<path> "<url>"` sulla route
+pubblica `POST /upload/immagine` del server `geko-mcp` (le custom_route FastMCP
+non passano dal middleware auth: la firma È l'auth). La route riusa
+`save_article_image` (nome esatto, sovrascrittura, scope articolo). Env
+richiesta: `GEKO_UPLOAD_SIGNING_KEY` (secret forte, solo sul container
+geko-mcp; se assente il tool dà errore e la route risponde 503). Gli URL
+scadono dopo `scadenza_minuti` (default 15). Il tool `carica_immagine` base64
+resta per i casi piccoli.
 
 ## Convenzioni Codice
 
