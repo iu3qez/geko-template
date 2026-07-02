@@ -133,6 +133,7 @@ Env richieste: `SCALEKIT_ENVIRONMENT_URL`, `SCALEKIT_CLIENT_ID`,
 - **Python**: Type hints, async/await per I/O
 - **Typst**: Funzioni con parametri named per chiarezza
 - **Errori**: Gestiti con try/except, log su console
+- **Logica articoli**: router `/api` e tool MCP delegano entrambi a `app/services/article_ops.py` (fonte unica, no duplicazione)
 
 ## File Importanti
 
@@ -161,4 +162,10 @@ python build.py esempio-geko67.typ
 
 # Verifica webapp
 curl http://localhost:8000/health
+
+# Test webapp (pytest-asyncio). NB: Python di sistema è PEP 668 → serve venv locale
+cd webapp
+python -m venv .venv && source .venv/bin/activate   # .venv è gitignorato
+pip install -r requirements.txt
+python -m pytest          # test in webapp/tests/, asyncio_mode=auto (pytest.ini)
 ```
