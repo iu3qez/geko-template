@@ -83,8 +83,10 @@ services:
         - "traefik.http.routers.geko-rtr.service=geko-svc"
         - "traefik.http.services.geko-svc.loadbalancer.server.port=8000"
 
-        # Router MCP — host dedicato, SENZA middleware Authentik (auth = Scalekit)
-        - "traefik.http.routers.geko-mcp-rtr.rule=Host(`geko-mcp.fabris.me`)"
+        # Router MCP — host dedicato, SENZA middleware Authentik (auth = Scalekit).
+        # Path ristretto a /mcp e /.well-known: nessun altro path su questo
+        # host deve raggiungere l'app (niente /api/* o SPA senza Authentik).
+        - "traefik.http.routers.geko-mcp-rtr.rule=Host(`geko-mcp.fabris.me`) && (PathPrefix(`/mcp`) || PathPrefix(`/.well-known`))"
         - "traefik.http.routers.geko-mcp-rtr.entrypoints=websecure"
         - "traefik.http.routers.geko-mcp-rtr.service=geko-svc"
 

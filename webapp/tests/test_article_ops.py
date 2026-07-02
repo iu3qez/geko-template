@@ -59,7 +59,6 @@ async def test_list_magazines(db, sample_magazine):
 
 
 async def test_assign_article_replaces_previous(db):
-    m1 = await article_ops.list_magazines(db)  # ensure module import path
     from app.models import Magazine, MagazineStatus
     a = Magazine(numero="1", mese="G", anno="2026", stato=MagazineStatus.BOZZA)
     b = Magazine(numero="2", mese="F", anno="2026", stato=MagazineStatus.BOZZA)

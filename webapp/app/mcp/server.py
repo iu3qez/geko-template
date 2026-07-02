@@ -9,7 +9,9 @@ from ..services import article_ops
 from .auth import build_auth
 from .conventions import CONVENZIONI, markdown_preview
 
-mcp = FastMCP(name="GEKO Articoli", auth=build_auth())
+_auth = build_auth()
+mcp_secure = _auth is not None
+mcp = FastMCP(name="GEKO Articoli", auth=_auth)
 
 
 @mcp.tool
