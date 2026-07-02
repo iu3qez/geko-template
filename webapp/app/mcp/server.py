@@ -227,6 +227,8 @@ async def ottieni_upload_url(
     dopo `scadenza_minuti` (1-60, default 15). Ritorna
     [{nome_file, url, scade_a}, ...].
     """
+    if not nomi_file:
+        raise ValueError("nomi_file non può essere vuoto")
     if not 1 <= scadenza_minuti <= 60:
         raise ValueError("scadenza_minuti deve essere tra 1 e 60")
     base = os.environ.get("MCP_PUBLIC_URL", "").rstrip("/")
@@ -263,14 +265,14 @@ async def upload_immagine(request: Request) -> JSONResponse:
     """
     try:
         claims = upload_tokens.verify(request.query_params.get("token", ""))
+    except upload_tokens.MissingKeyError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=503)
     except upload_tokens.TokenError as exc:
-        # Chiave server assente → 503; token invalido/scaduto → 401.
-        status = 503 if "non configurata" in str(exc) else 401
-        return JSONResponse({"error": str(exc)}, status_code=status)
+        return JSONResponse({"error": str(exc)}, status_code=401)
 
     form = await request.form()
     file = form.get("file")
-    if file is None or not hasattr(file, "read"):
+    if file is None or isinstance(file, str):
         return JSONResponse({"error": "campo 'file' mancante"}, status_code=400)
     content = await file.read()
 

@@ -119,3 +119,35 @@ async def test_upload_immagine_file_mancante(db, patch_session, uploads_tmp):
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as ac:
         resp = await ac.post("/upload/immagine", params={"token": token})
     assert resp.status_code == 400
+
+
+async def test_ottieni_upload_url_lista_vuota(patch_session):
+    async with Client(server_mod.mcp) as client:
+        art = await _crea(client)
+        with pytest.raises(ToolError):
+            await client.call_tool(
+                "ottieni_upload_url", {"articolo_id": art["id"], "nomi_file": []}
+            )
+
+
+async def test_upload_immagine_token_scaduto(db, patch_session, uploads_tmp):
+    art = await article_ops.create_article(db, titolo="QMX", contenuto_md="x")
+    token = upload_tokens.mint(art["id"], "x.png", exp_epoch=1_000)  # scaduto
+    resp = await _post_upload(token, "x.png", PNG_BYTES)
+    assert resp.status_code == 401
+
+
+async def test_upload_immagine_estensione_non_valida(db, patch_session, uploads_tmp):
+    art = await article_ops.create_article(db, titolo="QMX", contenuto_md="x")
+    # token coniato direttamente per un nome con estensione non ammessa:
+    token = upload_tokens.mint(art["id"], "malware.exe", exp_epoch=2_000_000_000)
+    resp = await _post_upload(token, "malware.exe", PNG_BYTES)
+    assert resp.status_code == 400
+
+
+async def test_upload_immagine_chiave_assente(db, patch_session, uploads_tmp, monkeypatch):
+    art = await article_ops.create_article(db, titolo="QMX", contenuto_md="x")
+    token = upload_tokens.mint(art["id"], "x.png", exp_epoch=2_000_000_000)  # con chiave presente
+    monkeypatch.delenv("GEKO_UPLOAD_SIGNING_KEY", raising=False)
+    resp = await _post_upload(token, "x.png", PNG_BYTES)
+    assert resp.status_code == 503

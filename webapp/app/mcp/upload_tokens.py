@@ -18,10 +18,14 @@ class TokenError(ValueError):
     """Token assente, malformato, con firma non valida o scaduto."""
 
 
+class MissingKeyError(TokenError):
+    """La chiave di firma del server non è configurata (feature disattivata)."""
+
+
 def _signing_key() -> bytes:
     key = os.environ.get("GEKO_UPLOAD_SIGNING_KEY")
     if not key:
-        raise TokenError("GEKO_UPLOAD_SIGNING_KEY non configurata")
+        raise MissingKeyError("GEKO_UPLOAD_SIGNING_KEY non configurata")
     return key.encode()
 
 
