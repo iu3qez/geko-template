@@ -94,6 +94,11 @@ COPY --chown=geko:geko app/ ./app/
 # Copia frontend build output
 COPY --from=frontend --chown=geko:geko /frontend/build ./frontend/build
 
+# Package Typst vendorizzati (cmarker) per compilazione OFFLINE: NON rimuovere
+# Non sono montati a runtime (i volume mount coprono solo template.typ e assets),
+# quindi devono finire nell'immagine per far funzionare `import "@preview/cmarker..."`.
+COPY --chown=geko:geko typst/packages ./typst/packages
+
 # Crea directory static vuota (per compatibilità)
 RUN mkdir -p /app/static && chown geko:geko /app/static
 
