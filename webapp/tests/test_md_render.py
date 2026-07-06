@@ -92,3 +92,9 @@ def test_render_segments_ritorna_range():
     segs = render_segments("Intro\n\n> [!NOTE] N\n> corpo")
     assert [s.kind for s, _ in segs] == ["prose", "box"]
     assert all(isinstance(typ, str) and typ for _, typ in segs)
+
+
+def test_render_immagine_path_con_virgolette_escapato():
+    out = render_article_body('![img](weird"quote.png)')
+    assert '\\"' in out            # la virgoletta nel path è escapata
+    assert 'weird"quote.png"' not in out  # non termina la stringa in anticipo

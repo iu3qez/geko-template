@@ -173,7 +173,7 @@ def _parse_width(attrs: Optional[str]) -> Optional[str]:
 def _render_figura(alt: str, path: str, attrs: Optional[str],
                    image_base: Optional[str]) -> str:
     width = _parse_width(attrs)
-    parts = [f'"{_remap_path(path, image_base)}"']
+    parts = [f'"{_typ_str(_remap_path(path, image_base))}"']
     if alt:
         parts.append(f'didascalia: "{_typ_str(alt)}"')
     if width:
@@ -184,7 +184,7 @@ def _render_figura(alt: str, path: str, attrs: Optional[str],
 def _render_grid(images: list[tuple], image_base: Optional[str]) -> str:
     cells = []
     for alt, path, _attrs in images:
-        fig = f'figure(image("{_remap_path(path, image_base)}", width: 100%)'
+        fig = f'figure(image("{_typ_str(_remap_path(path, image_base))}", width: 100%)'
         if alt:
             fig += f', caption: [{_typ_str(alt)}]'
         fig += ')'
