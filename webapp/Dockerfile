@@ -95,22 +95,19 @@ COPY --chown=geko:geko app/ ./app/
 COPY --from=frontend --chown=geko:geko /frontend/build ./frontend/build
 
 # Package Typst vendorizzati (cmarker) per compilazione OFFLINE: NON rimuovere
-# Non sono montati a runtime (i volume mount coprono solo template.typ e assets),
+# Non sono montati a runtime (i volume mount coprono solo typst/src e typst/assets),
 # quindi devono finire nell'immagine per far funzionare `import "@preview/cmarker..."`.
 COPY --chown=geko:geko typst/packages ./typst/packages
 
 # Crea directory static vuota (per compatibilità)
 RUN mkdir -p /app/static && chown geko:geko /app/static
 
-# Crea directory dati con permessi corretti
-# Nota: creiamo un file vuoto per template.typ così Docker può montare un file sopra
+# Crea directory dati con permessi corretti.
+# template.typ NON è più un file montato: a runtime la root del repo è montata
+# come DIRECTORY su /app/typst/src (vedi docker-compose), e il doc generato la
+# importa come ../src/template.typ. Qui basta la dir generated/ scrivibile.
 RUN mkdir -p /app/data/uploads /app/data/images /app/data/output /app/typst/generated \
-    && touch /app/typst/template.typ \
     && chown -R geko:geko /app/data /app/typst /app/frontend
-
-# Copia template Typst dalla directory parent (se presente)
-# Nota: in produzione, montare come volume o copiare durante build
-# COPY --chown=geko:geko ../template.typ /app/typst/
 
 # Esponi porta
 EXPOSE 8000

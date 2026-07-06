@@ -10,13 +10,11 @@ TYPST_DIR = WEBAPP_DIR / "typst"
 OUTPUT_DIR = WEBAPP_DIR / "data" / "output"
 PKG_PATH = WEBAPP_DIR / "typst" / "packages"
 
-# Determina dove cercare template.typ:
-# - In Docker: /app/typst/template.typ (montato via volume)
-# - In locale: ../template.typ (nella root del progetto)
-if (TYPST_DIR / "template.typ").exists():
-    TEMPLATE_DIR = TYPST_DIR  # Docker: template montato in typst/
-else:
-    TEMPLATE_DIR = WEBAPP_DIR.parent  # Locale: template nella root progetto
+# template.typ è servito sotto typst/src/ (in Docker: mount di DIRECTORY della
+# repo root su /app/typst/src, così un `git pull` aggiorna il file senza problemi
+# di inode; nei test: symlink creato dalla fixture conftest). I doc generati sotto
+# typst/generated/ lo importano come "../src/template.typ".
+TEMPLATE_DIR = TYPST_DIR / "src"
 
 
 class MagazineBuilder:
@@ -110,7 +108,7 @@ class MagazineBuilder:
         """
         doc = (
             '#import "@preview/cmarker:0.1.10"\n'
-            '#import "../template.typ": *\n'
+            '#import "../src/template.typ": *\n'
             '#show: geko-magazine.with(numero: "0", mese: "Test", anno: "2026")\n'
             + typst_body
         )
@@ -145,7 +143,7 @@ class MagazineBuilder:
 
         # Import cmarker (rendering markdown) + template
         parts.append('#import "@preview/cmarker:0.1.10"')
-        parts.append('#import "../template.typ": *')
+        parts.append('#import "../src/template.typ": *')
         parts.append('')
 
         # Cover page

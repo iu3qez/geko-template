@@ -31,7 +31,7 @@
 #
 # Volumi:
 #   - ./data: database SQLite e file caricati (persistente)
-#   - ../template.typ: template Typst (read-only)
+#   - ..: sorgenti Typst (template.typ) come mount di directory su /app/typst/src
 #   - ../assets: immagini template (read-only)
 #
 # =============================================================================
@@ -70,8 +70,10 @@ services:
       # Database e file caricati (PERSISTENTE - non perdere!)
       - ./data:/app/data
 
-      # Template Typst dalla directory parent (read-only)
-      - ../template.typ:/app/typst/template.typ:ro
+      # Sorgenti Typst dalla root del repo: mount di DIRECTORY (non del singolo
+      # file), così un aggiornamento di template.typ è visto live dal container
+      # senza problemi di inode. Il doc generato importa ../src/template.typ.
+      - ..:/app/typst/src:ro
 
       # Assets (immagini, loghi) dalla directory parent (read-only)
       - ../assets:/app/typst/assets:ro

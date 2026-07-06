@@ -20,17 +20,18 @@ REPO_DIR = WEBAPP_DIR.parent
 
 @pytest.fixture(scope="session", autouse=True)
 def ensure_docker_like_typst_layout():
-    """Garantisce che `webapp/typst/{template.typ,assets}` esistano.
+    """Garantisce che `webapp/typst/{src,assets}` esistano.
 
-    In Docker questi sono bind-mount (vedi docker-compose.yml); in un
+    In Docker `typst/src` è un mount di DIRECTORY della root del repo (vedi
+    docker-compose.yml) e `typst/assets` un mount di `../assets`; in un
     checkout locale/CI nudo non esistono, e sia i doc generati da
     MagazineBuilder sia i probe di `try_compile_snippet` importano
-    `../template.typ` relativo a `typst/generated/`. Creiamo symlink
+    `../src/template.typ` relativo a `typst/generated/`. Creiamo symlink
     idempotenti verso la root del repo così i test di build funzionano
     anche a partire da un checkout pulito, senza toccare il layout Docker.
     """
     links = {
-        TYPST_DIR / "template.typ": REPO_DIR / "template.typ",
+        TYPST_DIR / "src": REPO_DIR,
         TYPST_DIR / "assets": REPO_DIR / "assets",
     }
     for link_path, target in links.items():

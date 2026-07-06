@@ -49,8 +49,10 @@ services:
       # Database e file caricati (PERSISTENTE)
       - ./data:/app/data
 
-      # Template Typst (dalla directory parent)
-      - ${PWD}/../template.typ:/app/typst/template.typ:ro
+      # Sorgenti Typst dalla root del repo: mount di DIRECTORY (non del singolo
+      # file) così un `git pull` che sostituisce template.typ è visto live dal
+      # container, senza problemi di inode. Il doc generato importa ../src/template.typ.
+      - ${PWD}/..:/app/typst/src:ro
       - ${PWD}/../assets:/app/typst/assets:ro
 
     healthcheck:
