@@ -21,7 +21,7 @@ from pathlib import Path
 import pytest
 
 from app.services.builder import MagazineBuilder
-from app.services.md_render import generate_article_typst
+from app.services.md_render import generate_article_typst, render_article_body
 
 
 def test_build_magazine_minimo(tmp_path, monkeypatch):
@@ -69,3 +69,16 @@ def test_articolo_reale_compila(md_file):
     )
     msg = MagazineBuilder().try_compile_snippet(body)
     assert msg is None, f"{md_file.stem} non compila: {msg}"
+
+
+ESEMPIO = Path(__file__).resolve().parent.parent / "app" / "services" / "esempio_convenzioni.md"
+
+
+def test_esempio_convenzioni_compila():
+    """L'articolo-esempio canonico (guida CONVENZIONI) copre ogni costrutto
+    (prosa, box GitHub-alert, tabella, figura singola con width, griglia di
+    immagini) e deve compilare per davvero, con asset locali su disco."""
+    md = ESEMPIO.read_text(encoding="utf-8")
+    out = render_article_body(md)
+    assert '#box-evidenza' in out and '#grid(' in out and '#figura(' in out
+    assert MagazineBuilder().try_compile_snippet(out) is None

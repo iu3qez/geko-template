@@ -1,5 +1,6 @@
 """Guida convenzioni Markdown → Typst e helper di anteprima per l'MCP."""
 
+import pathlib
 from typing import Optional
 
 from ..services.article_ops import article_image_base
@@ -43,6 +44,14 @@ Scrivi gli articoli in Markdown. Il template li converte in Typst così:
 
 Usa il tool `anteprima_typst` per vedere il Typst generato prima di salvare.
 """
+
+_ESEMPIO = pathlib.Path(__file__).resolve().parent.parent / "services" / "esempio_convenzioni.md"
+if _ESEMPIO.exists():
+    CONVENZIONI += (
+        "\n\n## Esempio completo\n\n```markdown\n"
+        + _ESEMPIO.read_text(encoding="utf-8")
+        + "\n```\n"
+    )
 
 
 def markdown_preview(md: str, articolo_id: Optional[int] = None) -> str:
