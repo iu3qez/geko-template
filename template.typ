@@ -164,82 +164,146 @@
     header: none,
     footer: none,
   )
-  
-  // Grid a due colonne: sinistra più larga
-  grid(
-    columns: (1.5fr, 1fr),
-    gutter: 1.2em,
 
-    // === COLONNA SINISTRA - Box unico con bordo dorato ===
-    block(
-      width: 100%,
-      height: 100%,
-      stroke: 3pt + geko-gold,
-      inset: 12pt,
-      [
-        // Immagine principale
-        #if immagine-principale != none {
-          image(immagine-principale, width: 100%)
-        }
-
-        #v(1.2em)
-
-        // Titolo rivista + sottotitolo editoriale
-        #text(size: 18pt, weight: "bold", fill: geko-magenta)[Il Geko Radio Magazine]
-        #v(0.3em)
-        #text(size: 14pt, weight: "bold", fill: geko-gold)[EDITORIALE]
-        #v(0.5em)
-
-        #set text(size: 11pt, fill: geko-dark)
-        #set par(justify: true, leading: 0.55em)
-        #editoriale-testo
-
-        #v(0.6em)
-        #text(size: 11pt, weight: "bold", fill: geko-dark)[#editoriale-autore]
+  // Colonna destra (IN EVIDENZA) — invariata, estratta per riuso
+  let colonna-destra = block(
+    width: 100%,
+    height: 100%,
+    stroke: 3pt + geko-gold,
+    inset: 12pt,
+    [
+      // Header: numero e data
+      #align(right)[
+        #text(size: 10pt, fill: geko-dark)[Nr. #numero | #mese – #anno]
       ]
-    ),
+      #v(1em)
 
-    // === COLONNA DESTRA - Box unico con bordo dorato ===
-    block(
-      width: 100%,
-      height: 100%,
-      stroke: 3pt + geko-gold,
-      inset: 12pt,
-      [
-        // Header: numero e data
-        #align(right)[
-          #text(size: 10pt, fill: geko-dark)[Nr. #numero | #mese – #anno]
+      // Titolo "IN EVIDENZA" in box magenta (larghezza intera)
+      #block(
+        width: 100%,
+        fill: geko-magenta,
+        inset: (x: 14pt, y: 8pt),
+        radius: 0pt,
+        align(right, text(size: 20pt, weight: "bold", fill: white, tracking: 1pt)[IN EVIDENZA])
+      )
+
+      #v(1.5em)
+
+      // Lista evidenze
+      #for ev in evidenze {
+        block(width: 100%, below: 1em)[
+          #text(size: 10pt, weight: "bold", fill: geko-magenta)[#upper(ev.titolo):]
+          #v(0.25em)
+          #set text(size: 9pt, fill: geko-dark)
+          #set par(justify: true, leading: 0.5em)
+          #ev.descrizione
         ]
-        #v(1em)
-
-        // Titolo "IN EVIDENZA" in box magenta (larghezza intera)
-        #block(
-          width: 100%,
-          fill: geko-magenta,
-          inset: (x: 14pt, y: 8pt),
-          radius: 0pt,
-          align(right, text(size: 20pt, weight: "bold", fill: white, tracking: 1pt)[IN EVIDENZA])
-        )
-
-        #v(1.5em)
-
-        // Lista evidenze
-        #for ev in evidenze {
-          block(width: 100%, below: 1em)[
-            // Titolo evidenza in magenta bold
-            #text(size: 10pt, weight: "bold", fill: geko-magenta)[#upper(ev.titolo):]
-            #v(0.25em)
-            // Descrizione
-            #set text(size: 9pt, fill: geko-dark)
-            #set par(justify: true, leading: 0.5em)
-            #ev.descrizione
-          ]
-        }
-      ]
-    )
+      }
+    ]
   )
 
-  pagebreak()
+  // Frammenti della colonna sinistra (definiti una volta, misurati e resi)
+  let intestazione = {
+    if immagine-principale != none {
+      image(immagine-principale, width: 100%)
+    }
+    v(1.2em)
+    text(size: 18pt, weight: "bold", fill: geko-magenta)[Il Geko Radio Magazine]
+    v(0.3em)
+    text(size: 14pt, weight: "bold", fill: geko-gold)[EDITORIALE]
+    v(0.5em)
+  }
+  let corpo-editoriale = {
+    set text(size: 11pt, fill: geko-dark)
+    set par(justify: true, leading: 0.55em)
+    editoriale-testo
+  }
+  let firma = {
+    v(0.6em)
+    text(size: 11pt, weight: "bold", fill: geko-dark)[#editoriale-autore]
+  }
+
+  // Decidiamo layout in base allo spazio: se l'editoriale entra nella colonna
+  // lo mostriamo per intero; altrimenti teaser troncato + rimando + pagina dedicata.
+  context {
+    // Geometria pagina (A4 meno i margini impostati sopra): 21-1.5-1.5, 29.7-1.2-1.5
+    let regione = (width: 18cm, height: 27cm)
+    let gutter = 0.5cm
+    let larghezza-col = (regione.width - gutter) * 1.5 / 2.5
+    let larghezza-interna = larghezza-col - 24pt   // inset 12pt * 2
+    let altezza-interna = regione.height - 24pt
+
+    let h-intestazione = measure(box(width: larghezza-interna, intestazione)).height
+    let h-firma = measure(box(width: larghezza-interna, firma)).height
+    let h-editoriale = measure(box(width: larghezza-interna, corpo-editoriale)).height
+
+    // La pagina di continuazione è sempre quella subito dopo la copertina.
+    let pag-continua = counter(page).get().first() + 1
+    let nota-continua = {
+      v(0.4em)
+      text(size: 10pt, style: "italic", fill: geko-magenta, weight: "bold")[
+        → L'editoriale continua a pag. #pag-continua
+      ]
+    }
+
+    // Decisione (stima): l'editoriale entra nello spazio residuo della colonna?
+    let spazio-inline = altezza-interna - h-intestazione - h-firma
+    let overflow = editoriale-testo != none and h-editoriale > spazio-inline
+
+    // Il layout della colonna usa un grid (auto, 1fr, auto): la riga centrale
+    // riempie esattamente lo spazio residuo, così il teaser (clip) e la nota/firma
+    // restano sempre dentro il box, senza calcoli d'altezza a mano.
+    let colonna-sinistra = block(
+      width: 100%,
+      height: 100%,
+      stroke: 3pt + geko-gold,
+      inset: 12pt,
+      grid(
+        rows: (auto, 1fr, auto),
+        row-gutter: 0pt,
+        intestazione,
+        if overflow {
+          block(width: 100%, height: 100%, clip: true, corpo-editoriale)
+        } else {
+          corpo-editoriale
+        },
+        if overflow { nota-continua } else { firma },
+      )
+    )
+
+    grid(
+      columns: (1.5fr, 1fr),
+      gutter: gutter,
+      colonna-sinistra,
+      colonna-destra,
+    )
+
+    pagebreak()
+
+    // Pagina editoriale dedicata (solo se l'editoriale non entrava in copertina)
+    if overflow {
+      set page(
+        paper: "a4",
+        margin: (top: 2cm, bottom: 2cm, left: 2cm, right: 2cm),
+        header: align(right)[#page-number-box()],
+        footer: align(center)[
+          #text(size: 9pt, fill: geko-dark)[Geko Radio Magazine – Nr. #numero | #mese - #anno]
+        ],
+      )
+      text(size: 22pt, weight: "bold", fill: geko-magenta)[Editoriale]
+      v(0.3em)
+      line(length: 100%, stroke: 1pt + geko-gold)
+      v(0.8em)
+      block({
+        set text(size: 11pt, fill: geko-dark)
+        set par(justify: true, leading: 0.6em, first-line-indent: 1em)
+        editoriale-testo
+      })
+      v(0.8em)
+      align(right, text(size: 11pt, weight: "bold", fill: geko-dark)[#editoriale-autore])
+      pagebreak()
+    }
+  }
 }
 
 // ============================================
