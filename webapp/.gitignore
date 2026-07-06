@@ -28,6 +28,11 @@ data/articles/*
 typst/generated/*
 !typst/generated/.gitkeep
 
+# Symlink locali verso template/assets (in Docker sono bind-mount, vedi
+# docker-compose*.yml; per checkout locali/CI li crea tests/conftest.py)
+/typst/template.typ
+/typst/assets
+
 # Environment
 .env
 .env.local
