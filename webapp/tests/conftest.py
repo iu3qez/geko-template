@@ -1,5 +1,8 @@
 """Fixture condivise per i test della webapp GEKO."""
 
+from pathlib import Path
+
+import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -9,6 +12,32 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import StaticPool
 
 from app.models import Base, Magazine, MagazineStatus
+
+WEBAPP_DIR = Path(__file__).resolve().parent.parent
+TYPST_DIR = WEBAPP_DIR / "typst"
+REPO_DIR = WEBAPP_DIR.parent
+
+
+@pytest.fixture(scope="session", autouse=True)
+def ensure_docker_like_typst_layout():
+    """Garantisce che `webapp/typst/{template.typ,assets}` esistano.
+
+    In Docker questi sono bind-mount (vedi docker-compose.yml); in un
+    checkout locale/CI nudo non esistono, e sia i doc generati da
+    MagazineBuilder sia i probe di `try_compile_snippet` importano
+    `../template.typ` relativo a `typst/generated/`. Creiamo symlink
+    idempotenti verso la root del repo così i test di build funzionano
+    anche a partire da un checkout pulito, senza toccare il layout Docker.
+    """
+    links = {
+        TYPST_DIR / "template.typ": REPO_DIR / "template.typ",
+        TYPST_DIR / "assets": REPO_DIR / "assets",
+    }
+    for link_path, target in links.items():
+        if link_path.exists() or link_path.is_symlink():
+            continue
+        link_path.parent.mkdir(parents=True, exist_ok=True)
+        link_path.symlink_to(target)
 
 
 @pytest_asyncio.fixture

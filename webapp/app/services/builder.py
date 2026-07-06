@@ -8,6 +8,7 @@ import typst
 WEBAPP_DIR = Path(__file__).parent.parent.parent
 TYPST_DIR = WEBAPP_DIR / "typst"
 OUTPUT_DIR = WEBAPP_DIR / "data" / "output"
+PKG_PATH = WEBAPP_DIR / "typst" / "packages"
 
 # Determina dove cercare template.typ:
 # - In Docker: /app/typst/template.typ (montato via volume)
@@ -91,10 +92,36 @@ class MagazineBuilder:
         # Compile to PDF
         # Use WEBAPP_DIR as root to access both typst/ and data/ directories
         pdf_path = self.output_dir / f"geko{numero}.pdf"
-        pdf_bytes = typst.compile(str(typ_path), root=str(WEBAPP_DIR))
+        pdf_bytes = typst.compile(
+            str(typ_path), root=str(WEBAPP_DIR), package_path=str(PKG_PATH)
+        )
         pdf_path.write_bytes(pdf_bytes)
 
         return pdf_path
+
+    def try_compile_snippet(self, typst_body: str) -> Optional[str]:
+        """Compila un frammento isolato (import cmarker+template+show geko).
+
+        Usato dalla diagnostica per-segmento in `/build`: isola un singolo
+        segmento generato da `md_render.render_segments` per capire se è
+        proprio quello a rompere la compilazione.
+
+        Ritorna None se ok, oppure il messaggio d'errore Typst.
+        """
+        doc = (
+            '#import "@preview/cmarker:0.1.10"\n'
+            '#import "../template.typ": *\n'
+            '#show: geko-magazine.with(numero: "0", mese: "Test", anno: "2026")\n'
+            + typst_body
+        )
+        tmp = TYPST_DIR / "generated" / "_probe.typ"
+        tmp.parent.mkdir(parents=True, exist_ok=True)
+        tmp.write_text(doc, encoding="utf-8")
+        try:
+            typst.compile(str(tmp), root=str(WEBAPP_DIR), package_path=str(PKG_PATH))
+            return None
+        except Exception as e:
+            return str(e)
 
     def _generate_document(
         self,
@@ -116,7 +143,8 @@ class MagazineBuilder:
         """Generate complete Typst document."""
         parts = []
 
-        # Import template (path relativo da generated/ a typst/)
+        # Import cmarker (rendering markdown) + template
+        parts.append('#import "@preview/cmarker:0.1.10"')
         parts.append('#import "../template.typ": *')
         parts.append('')
 

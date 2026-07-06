@@ -234,8 +234,8 @@ async def delete_magazine(magazine_id: int, db: AsyncSession = Depends(get_db)):
 async def build_pdf(magazine_id: int, db: AsyncSession = Depends(get_db)):
     """Build PDF for a magazine."""
     from ...services import article_ops
-    from ...services.builder import build_magazine_pdf
-    from ...services.converter import convert_markdown_to_typst
+    from ...services.builder import MagazineBuilder, build_magazine_pdf
+    from ...services.md_render import generate_article_typst, render_segments
 
     query = select(Magazine).options(
         selectinload(Magazine.articles).selectinload(Article.images),
@@ -252,29 +252,22 @@ async def build_pdf(magazine_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Magazine has no articles")
 
     try:
-        # Prepare articles typst content
-        # If contenuto_typ exists, use it; otherwise convert markdown to typst
+        # Prepara il Typst di ogni articolo SEMPRE dal markdown (niente
+        # contenuto_typ): titolo, sottotitolo, autore e nome_autore vengono
+        # inseriti da generate_article_typst; image_base risolve i riferimenti
+        # a immagini con nome nudo (![](x.png)) nella media library dell'articolo.
         articles_typst = []
         for article in magazine.articles:
-            if article.contenuto_typ:
-                content = article.contenuto_typ
-            elif article.contenuto_md:
-                # Convert markdown to typst on-the-fly
-                # convert_markdown_to_typst returns (metadata, typst_content)
-                # image_base risolve i riferimenti a immagini con nome nudo
-                # (![](x.png)) nella media library dell'articolo.
-                _, converted = convert_markdown_to_typst(
-                    article.contenuto_md,
-                    image_base=article_ops.article_image_base(article.id),
-                )
-                # Add title heading if content doesn't start with one
-                if not converted.strip().startswith(('= ', '#')):
-                    content = f"= {article.titolo}\n\n{converted}"
-                else:
-                    content = converted
-            else:
-                content = ""
-            articles_typst.append(content)
+            image_base = article_ops.article_image_base(article.id)
+            art_typ = generate_article_typst(
+                titolo=article.titolo,
+                sottotitolo=article.sottotitolo,
+                autore=article.autore,
+                nome=article.nome_autore,
+                contenuto_md=article.contenuto_md or "",
+                image_base=image_base,
+            )
+            articles_typst.append(art_typ)
 
         # Build evidenze (highlights) from article summaries
         evidenze = [
@@ -301,22 +294,61 @@ async def build_pdf(magazine_id: int, db: AsyncSession = Depends(get_db)):
         immagine_donazione = await Config.get(db, "immagine_donazione", "")
 
         # Build PDF (not async)
-        pdf_path = build_magazine_pdf(
-            numero=magazine.numero,
-            mese=magazine.mese,
-            anno=magazine.anno,
-            articles_typst=articles_typst,
-            editoriale=magazine.editoriale,
-            editoriale_autore=magazine.editoriale_autore,
-            copertina_path=copertina_path,
-            evidenze=evidenze,
-            team_membri=team_membri if team_membri else None,
-            link_iscrizione=link_iscrizione or None,
-            link_lista_distribuzione=link_lista_distribuzione or None,
-            link_donazione=link_donazione or None,
-            immagine_frequenze=immagine_frequenze or None,
-            immagine_donazione=immagine_donazione or None,
-        )
+        try:
+            pdf_path = build_magazine_pdf(
+                numero=magazine.numero,
+                mese=magazine.mese,
+                anno=magazine.anno,
+                articles_typst=articles_typst,
+                editoriale=magazine.editoriale,
+                editoriale_autore=magazine.editoriale_autore,
+                copertina_path=copertina_path,
+                evidenze=evidenze,
+                team_membri=team_membri if team_membri else None,
+                link_iscrizione=link_iscrizione or None,
+                link_lista_distribuzione=link_lista_distribuzione or None,
+                link_donazione=link_donazione or None,
+                immagine_frequenze=immagine_frequenze or None,
+                immagine_donazione=immagine_donazione or None,
+            )
+        except Exception:
+            # Diagnostica: isola articolo + segmento che non compila,
+            # provando ogni segmento markdown come frammento standalone.
+            builder = MagazineBuilder()
+            errori = []
+            for article in magazine.articles:
+                image_base = article_ops.article_image_base(article.id)
+                art_typ = generate_article_typst(
+                    titolo=article.titolo,
+                    sottotitolo=article.sottotitolo,
+                    autore=article.autore,
+                    nome=article.nome_autore,
+                    contenuto_md=article.contenuto_md or "",
+                    image_base=image_base,
+                )
+                if builder.try_compile_snippet(art_typ) is None:
+                    continue  # questo articolo compila: non è il colpevole
+                found = False
+                for seg, typ in render_segments(article.contenuto_md or "", image_base):
+                    msg = builder.try_compile_snippet(typ)
+                    if msg:
+                        errori.append({
+                            "articolo_id": article.id,
+                            "titolo": article.titolo,
+                            "segmento": seg.kind,
+                            "righe": [seg.start_line + 1, seg.end_line + 1],
+                            "errore": msg,
+                        })
+                        found = True
+                if not found:
+                    errori.append({
+                        "articolo_id": article.id,
+                        "titolo": article.titolo,
+                        "segmento": "metadati",
+                        "righe": [1, 1],
+                        "errore": builder.try_compile_snippet(art_typ),
+                    })
+            return {"status": "error", "errori": errori}
 
         # Update magazine status
         magazine.stato = MagazineStatus.PUBBLICATO
