@@ -81,16 +81,26 @@
 // FUNZIONE: Box evidenza (sfondo grigio, bordo oro)
 // ============================================
 
-#let box-evidenza(titolo: none, contenuto) = {
+// Colori bordo/titolo per tipo di alert (GitHub-style)
+#let _alert-colori = (
+  note:      (bordo: geko-gold,        titolo: geko-magenta),
+  tip:       (bordo: rgb("#2E7D32"),   titolo: rgb("#2E7D32")),
+  warning:   (bordo: rgb("#ED6C02"),   titolo: rgb("#ED6C02")),
+  important: (bordo: geko-magenta,     titolo: geko-magenta),
+  caution:   (bordo: rgb("#D32F2F"),   titolo: rgb("#D32F2F")),
+)
+
+#let box-evidenza(titolo: none, tipo: "note", contenuto) = {
+  let c = _alert-colori.at(tipo, default: _alert-colori.note)
   block(
     width: 100%,
     fill: geko-light,
     inset: 12pt,
     radius: 3pt,
-    stroke: 0.5pt + geko-gold,
+    stroke: 0.5pt + c.bordo,
     [
-      #if titolo != none {
-        text(weight: "bold", fill: geko-magenta, size: 11pt)[#titolo]
+      #if titolo != none and titolo != "" {
+        text(weight: "bold", fill: c.titolo, size: 11pt)[#titolo]
         v(0.4em)
       }
       #contenuto
@@ -361,6 +371,15 @@
 
   // Heading senza numerazione
   set heading(numbering: none)
+
+  // Tabelle da markdown (cmarker emette #table nativo) con look GEKO
+  set table(
+    fill: (x, y) => if y == 0 { geko-gold } else if calc.odd(y) { geko-light } else { white },
+    stroke: 0.5pt + geko-dark.lighten(60%),
+    inset: 6pt,
+  )
+  show table.cell.where(y: 0): set text(fill: white, weight: "bold", size: 9pt)
+  show table: set text(size: 9pt)
 
   // H1 = Titolo articolo principale (inizia a pagina nuova)
   show heading.where(level: 1): it => {
@@ -674,13 +693,31 @@
 #let figura(percorso, didascalia: none, larghezza: 100%) = {
   figure(
     image(percorso, width: larghezza),
-    caption: if didascalia != none { 
-      text(size: 9pt, style: "italic")[#didascalia] 
+    caption: if didascalia != none {
+      text(size: 9pt, style: "italic")[#didascalia]
     },
     supplement: none,
     numbering: none,
   )
 }
+
+// ============================================
+// SCOPE per cmarker.render: reindirizza gli elementi markdown
+// alle funzioni di stile GEKO senza toccare la prosa.
+// ============================================
+
+#let geko-md-scope = (
+  // Link markdown -> #link-geko. dest può essere una label (anchor interni): in
+  // quel caso si usa il link nativo.
+  link: (dest, body) => if type(dest) == str {
+    link-geko(dest, testo: body)
+  } else {
+    link(dest, body)
+  },
+  // Fallback per immagini dentro la prosa (le immagini "da sole" le gestisce il
+  // segmenter Python emettendo #figura/#grid direttamente).
+  image: (src, alt: none, ..args) => figura(src, didascalia: alt),
+)
 
 // ============================================
 // ESPORTAZIONI
