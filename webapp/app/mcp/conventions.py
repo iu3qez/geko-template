@@ -3,7 +3,7 @@
 from typing import Optional
 
 from ..services.article_ops import article_image_base
-from ..services.converter import MarkdownToTypstConverter
+from ..services.md_render import render_article_body
 
 CONVENZIONI = """\
 # Convenzioni Markdown del GEKO Radio Magazine
@@ -12,7 +12,8 @@ Scrivi gli articoli in Markdown. Il template li converte in Typst così:
 
 - `# Titolo` → sezione (il titolo dell'articolo resta di primo livello).
 - `**grassetto**` → grassetto; `*corsivo*` o `_corsivo_` → corsivo.
-- `[testo](url)` e URL nudi → link stilizzato `#link-geko`.
+- `[testo](url)` → link stilizzato `#link-geko` (gli URL nudi non vengono più
+  auto-linkati: usa `<url>` per un link esplicito).
 - `![descrizione](/uploads/foto.jpg){width=80%}` → figura con didascalia.
   I path `/uploads/...` vengono rimappati automaticamente.
 - Per pubblicare figure da MCP: nel Markdown usa il **solo nome file**
@@ -28,24 +29,23 @@ Scrivi gli articoli in Markdown. Il template li converte in Typst così:
 - Liste puntate con `*` o `-`; liste numerate con `1.`.
 - `> citazione` → blocco citazione.
 - Tabelle Markdown `| a | b |` con riga separatrice → tabella GEKO.
-- Box evidenza (admonition), con titolo tra virgolette → funzione `#box-evidenza`:
+- Box evidenza (GitHub-alert) → funzione `#box-evidenza`: riga `> [!TIPO] Titolo`,
+  poi il corpo su righe `>`. Tipi: NOTE, TIP, WARNING, IMPORTANT, CAUTION.
+  Il corpo resta Markdown.
 
-  !!! "Attenzione alla batteria"
-  In portatile QRP porta sempre una batteria di scorta.
-  Il freddo riduce la capacità del 20-30%.
-  !!!
+  > [!WARNING] Attenzione alla batteria
+  > In portatile QRP porta sempre una batteria di scorta.
+  > Il **freddo** riduce la capacità del 20-30%.
+
+- Immagini: `![alt](file.png)` a piena larghezza; `{width=60%}` per una figura
+  più piccola centrata; due o più immagini su righe consecutive → griglia 2 colonne.
+- URL: usare `[testo](url)` o `<url>` (gli URL nudi non vengono più auto-linkati).
 
 Usa il tool `anteprima_typst` per vedere il Typst generato prima di salvare.
 """
 
 
 def markdown_preview(md: str, articolo_id: Optional[int] = None) -> str:
-    """Converte Markdown GEKO in Typst e restituisce il sorgente Typst.
-
-    Con `articolo_id`, i riferimenti a immagini con nome file nudo
-    (`![](nome.png)`) si risolvono nella media library di quell'articolo.
-    """
+    """Renderizza il Markdown GEKO in Typst (via cmarker) e lo restituisce."""
     image_base = article_image_base(articolo_id) if articolo_id is not None else None
-    converter = MarkdownToTypstConverter(image_base=image_base)
-    _metadata, typst = converter.convert(md)
-    return typst
+    return render_article_body(md, image_base=image_base)
