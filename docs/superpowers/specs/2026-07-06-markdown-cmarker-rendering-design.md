@@ -108,12 +108,21 @@ dentro allo stesso passo, a costo ~zero.
 - La grammatica delle annotazioni `{...}` è **estensibile**: `{width=N%}` in v1;
   `{inline width=50 align=left|right|center}` **riservata** ma non implementata.
 
-### Fase 2 (fuori da questo spec): immagine flottante
-`{inline …}` → `wrap-content` di [`wrap-it:0.1.1`](https://typst.app/universe/package/wrap-it)
-(testo che scorre attorno). È l'**unica** modalità che accoppia immagine + testo
-seguente (richiede cattura del paragrafo successivo + cmarker annidato). Oggi
-usata da **0/172** immagini → rimandata a fast-follow dopo verifica del core in
-produzione. La grammatica è già riservata nel parser.
+### Fase 2 (fuori da questo spec)
+Due feature rimandate a fast-follow dopo la verifica del core in produzione:
+
+1. **Immagine flottante** — `{inline …}` → `wrap-content` di
+   [`wrap-it:0.1.1`](https://typst.app/universe/package/wrap-it) (testo che
+   scorre attorno). È l'**unica** modalità che accoppia immagine + testo seguente
+   (richiede cattura del paragrafo successivo + cmarker annidato). Oggi usata da
+   **0/172** immagini. Grammatica già riservata nel parser.
+2. **Formule LaTeX** — cmarker ha già `ENABLE_MATH` + callback `math:`; si abilita
+   con `math: (block, src) => mitex(src)` (package
+   [`mitex`](https://typst.app/universe/package/mitex), da vendorizzare offline).
+   Cablaggio ~mezza giornata. Tenuta OFF nel v1 per un **tradeoff sul `$`**: con
+   math OFF cmarker escapa *ogni* `$` (→ "30$" sempre sicuro, parte del fix bug);
+   con math ON le coppie `$…$` diventano math. Se attivata, valutare opt-in
+   per-articolo. `mitex` copre un sottoinsieme di LaTeX.
 
 ## Admonition (GitHub-alert)
 
@@ -139,19 +148,26 @@ livello di riga e ne rende il corpo con cmarker annidato. La scelta di sintassi
 ## Error handling
 
 - **Happy path** (`POST /{magazine_id}/build`): invariato — build completo.
-- **Su fallimento**: eseguire **probe per-articolo** — compilare ogni articolo
-  isolato in un documento minimo (import template + solo quell'articolo) per
-  attribuire *quale* articolo non compila. Restituire risposta strutturata:
+- **Su fallimento**: attribuzione **a livello di segmento**. Il segmenter
+  conosce il range di righe markdown originali di ogni segmento (prosa/box/
+  immagini): su errore si compilano i segmenti isolatamente per individuare
+  quello che fallisce e riportarne il **range di righe** del markdown. Risposta
+  strutturata:
   ```json
-  {"status":"error","errori":[{"articolo_id":7,"titolo":"…","errore":"…"}]}
+  {"status":"error","errori":[
+    {"articolo_id":7,"titolo":"…","segmento":"box","righe":[41,45],"errore":"…"}
+  ]}
   ```
-  La UI mostra *"Articolo «Titolo»: <messaggio>"* invece di `unclosed delimiter`
-  nudo.
-- Con cmarker gran parte degli errori di delimitatore da prosa sparisce; i
-  restanti (path immagine errato, ecc.) restano ma **attribuiti a un articolo**.
-- Mapping errore→riga del **markdown** non è in scope v1 (cmarker riporta la riga
-  del Typst generato, non del md); l'attribuzione per-articolo è già un salto di
-  qualità netto.
+  La UI mostra *"Articolo «Titolo», box alle righe 41–45: <messaggio>"* invece di
+  `unclosed delimiter` nudo.
+- Fattibile senza dipendenze nuove perché **il segmenter è nostro** (possediamo i
+  range di riga). Con cmarker gran parte degli errori di delimitatore da prosa
+  sparisce; i residui sono strutturali (path immagine errato, alert malformato) →
+  l'attribuzione per-segmento porta praticamente sul blocco colpevole.
+- **Non in scope**: riga/colonna *esatta* dentro un segmento di prosa — Typst
+  riporta la posizione nel Typst generato da cmarker (WASM), che non espone un
+  sourcemap verso gli offset del markdown; richiederebbe patchare cmarker in
+  Rust, sproporzionato. Il livello-segmento è il punto dolce.
 
 ## Docker offline
 
@@ -205,8 +221,10 @@ usato anche come smoke-test.
 
 ## Non-goal (v1)
 
-- Immagine flottante `{inline}` (fase 2).
-- Mapping errore→riga del markdown sorgente.
-- Supporto math LaTeX (cmarker `math:` callback) — non richiesto.
+- Immagine flottante `{inline}` → **fase 2**.
+- Supporto math LaTeX (cmarker `math:` callback + `mitex`) → **fase 2** (tradeoff
+  `$`, vedi sopra).
+- Mapping errore→**riga/colonna esatta** del markdown (l'attribuzione a livello
+  di *segmento* È in scope v1; l'esatta no — niente sourcemap da cmarker).
 - Autolink di URL nudi non racchiusi (cmarker senza GFM non li autolinka; le
   convenzioni useranno `[testo](url)` o `<url>`). Comportamento documentato.
