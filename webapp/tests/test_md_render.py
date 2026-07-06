@@ -161,3 +161,51 @@ def test_articolo_completo_compila():
         assert len(pdf) > 1000
     finally:
         doc.unlink(missing_ok=True)
+
+
+def test_titolo_e_sottotitolo_con_speciali_compilano():
+    # titolo/sottotitolo con $ # _ non devono rompere ("unclosed delimiter")
+    body = generate_article_typst(
+        titolo="QRP a 5$ e #3", sottotitolo="costa 5$ e _tanto_",
+        autore='IK2"X', nome='Mario "il Grande"',
+        contenuto_md="Testo.",
+    )
+    GENERATED_DIR.mkdir(parents=True, exist_ok=True)
+    doc = GENERATED_DIR / f"test_titolo_speciali_{uuid.uuid4().hex}.typ"
+    try:
+        doc.write_text(
+            '#import "@preview/cmarker:0.1.10"\n'
+            '#import "/template.typ": *\n'
+            '#show: geko-magazine.with(numero: "1", mese: "Luglio", anno: "2026")\n'
+            + body,
+            encoding="utf-8",
+        )
+        pdf = typst.compile(str(doc), root=str(REPO_DIR), package_path=str(PKG_PATH))
+        assert len(pdf) > 1000
+    finally:
+        doc.unlink(missing_ok=True)
+
+
+def test_grid_caption_con_dollaro():
+    # didascalie nella griglia con $ # devono restare letterali (caption STRING)
+    body = generate_article_typst(
+        titolo="T", sottotitolo=None, autore=None, nome=None,
+        contenuto_md=(
+            "![Costo 5$](/assets/corno-grande-1.jpg)\n"
+            "![Schema #2](/assets/corno-grande-2.jpg)"
+        ),
+    )
+    GENERATED_DIR.mkdir(parents=True, exist_ok=True)
+    doc = GENERATED_DIR / f"test_grid_caption_{uuid.uuid4().hex}.typ"
+    try:
+        doc.write_text(
+            '#import "@preview/cmarker:0.1.10"\n'
+            '#import "/template.typ": *\n'
+            '#show: geko-magazine.with(numero: "1", mese: "Luglio", anno: "2026")\n'
+            + body,
+            encoding="utf-8",
+        )
+        pdf = typst.compile(str(doc), root=str(REPO_DIR), package_path=str(PKG_PATH))
+        assert len(pdf) > 1000
+    finally:
+        doc.unlink(missing_ok=True)

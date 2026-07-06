@@ -145,6 +145,22 @@ def _typ_str(s: str) -> str:
     )
 
 
+_TYP_MARKUP_SPECIAL = set('\\*_`<@=+-./$\'"~#[]')
+
+
+def _typ_markup(s: str) -> str:
+    """Escapa testo destinato al *markup* Typst (heading `= ...`, content block
+    `[...]`). A differenza di _typ_str (contesto stringa "..."), qui vanno
+    protetti tutti i caratteri speciali del markup, così titoli/didascalie con
+    $ # _ ecc. restano letterali e non rompono la compilazione."""
+    out = []
+    for ch in s.replace('\r', '').replace('\n', ' '):
+        if ch in _TYP_MARKUP_SPECIAL:
+            out.append('\\')
+        out.append(ch)
+    return ''.join(out)
+
+
 # ── Helper immagini (path remap + media library nomi nudi) ──────────
 def _is_bare_filename(path: str) -> bool:
     return (
@@ -186,7 +202,7 @@ def _render_grid(images: list[tuple], image_base: Optional[str]) -> str:
     for alt, path, _attrs in images:
         fig = f'figure(image("{_typ_str(_remap_path(path, image_base))}", width: 100%)'
         if alt:
-            fig += f', caption: [{_typ_str(alt)}]'
+            fig += f', caption: "{_typ_str(alt)}"'
         fig += ')'
         cells.append(fig)
     if len(cells) % 2 == 1:
@@ -249,14 +265,14 @@ def generate_article_typst(
     image_base: Optional[str] = None,
 ) -> str:
     """Articolo Typst completo: titolo (H1), sottotitolo, autore, corpo, separatore."""
-    parts = [f'= {titolo}', '']
+    parts = [f'= {_typ_markup(titolo)}', '']
     if sottotitolo:
-        parts.append(f'#sottotitolo-sezione[{sottotitolo}]')
+        parts.append(f'#sottotitolo-sezione[{_typ_markup(sottotitolo)}]')
     if autore:
         if nome:
-            parts.append(f'#autore("{autore}", nome: "{nome}")')
+            parts.append(f'#autore("{_typ_str(autore)}", nome: "{_typ_str(nome)}")')
         else:
-            parts.append(f'#autore("{autore}")')
+            parts.append(f'#autore("{_typ_str(autore)}")')
     parts.append('')
     parts.append(render_article_body(contenuto_md, image_base))
     parts.append('')

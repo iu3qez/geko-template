@@ -318,6 +318,17 @@ async def build_pdf(magazine_id: int, db: AsyncSession = Depends(get_db)):
             errori = []
             for article in magazine.articles:
                 image_base = article_ops.article_image_base(article.id)
+                art_typ = generate_article_typst(
+                    titolo=article.titolo,
+                    sottotitolo=article.sottotitolo,
+                    autore=article.autore,
+                    nome=article.nome_autore,
+                    contenuto_md=article.contenuto_md or "",
+                    image_base=image_base,
+                )
+                if builder.try_compile_snippet(art_typ) is None:
+                    continue  # questo articolo compila: non è il colpevole
+                found = False
                 for seg, typ in render_segments(article.contenuto_md or "", image_base):
                     msg = builder.try_compile_snippet(typ)
                     if msg:
@@ -328,6 +339,15 @@ async def build_pdf(magazine_id: int, db: AsyncSession = Depends(get_db)):
                             "righe": [seg.start_line + 1, seg.end_line + 1],
                             "errore": msg,
                         })
+                        found = True
+                if not found:
+                    errori.append({
+                        "articolo_id": article.id,
+                        "titolo": article.titolo,
+                        "segmento": "metadati",
+                        "righe": [1, 1],
+                        "errore": builder.try_compile_snippet(art_typ),
+                    })
             return {"status": "error", "errori": errori}
 
         # Update magazine status
