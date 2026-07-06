@@ -129,3 +129,112 @@ def segment_markdown(md: str) -> list[Segment]:
 
     flush_prose(len(lines) - 1)
     return segments
+
+
+# ── Escaping stringa Typst ──────────────────────────────────────────
+def _typ_str(s: str) -> str:
+    """Escapa una stringa per un literal Typst "..." (senza le virgolette).
+    Trasformazione totale su soli 4 caratteri: la ragione per cui la prosa
+    non può più rompere la compilazione."""
+    return (
+        s.replace('\\', '\\\\')
+         .replace('"', '\\"')
+         .replace('\r', '')
+         .replace('\t', '\\t')
+         .replace('\n', '\\n')
+    )
+
+
+# ── Helper immagini (path remap + media library nomi nudi) ──────────
+def _is_bare_filename(path: str) -> bool:
+    return (
+        not path.startswith('/')
+        and not path.startswith('data:')
+        and '://' not in path
+        and '/' not in path
+    )
+
+
+def _remap_path(path: str, image_base: Optional[str]) -> str:
+    if path.startswith('/uploads/'):
+        return '/data' + path
+    if image_base and _is_bare_filename(path):
+        return f"{image_base}/{path}"
+    return path
+
+
+def _parse_width(attrs: Optional[str]) -> Optional[str]:
+    if not attrs:
+        return None
+    m = re.search(r'width=(\d+%?)', attrs)
+    return m.group(1) if m else None
+
+
+def _render_figura(alt: str, path: str, attrs: Optional[str],
+                   image_base: Optional[str]) -> str:
+    width = _parse_width(attrs)
+    parts = [f'"{_remap_path(path, image_base)}"']
+    if alt:
+        parts.append(f'didascalia: "{_typ_str(alt)}"')
+    if width:
+        parts.append(f'larghezza: {width}')
+    return f'#figura({", ".join(parts)})'
+
+
+def _render_grid(images: list[tuple], image_base: Optional[str]) -> str:
+    cells = []
+    for alt, path, _attrs in images:
+        fig = f'figure(image("{_remap_path(path, image_base)}", width: 100%)'
+        if alt:
+            fig += f', caption: [{_typ_str(alt)}]'
+        fig += ')'
+        cells.append(fig)
+    if len(cells) % 2 == 1:
+        cells[-1] = f'grid.cell(colspan: 2, {cells[-1]})'
+    out = [
+        '#grid(',
+        '  columns: (1fr, 1fr),',
+        '  column-gutter: 8pt,',
+        '  row-gutter: 8pt,',
+    ]
+    out.extend(f'  {c},' for c in cells)
+    out.append(')')
+    return '\n'.join(out)
+
+
+def _render_cmarker(md_text: str, label_prefix: str) -> str:
+    return (
+        f'#cmarker.render("{_typ_str(md_text)}", '
+        f'h1-level: 2, scope: geko-md-scope, label-prefix: "{label_prefix}")'
+    )
+
+
+# ── Rendering dei segmenti ──────────────────────────────────────────
+def render_segments(md: str, image_base: Optional[str] = None) -> list[tuple[Segment, str]]:
+    """Ritorna [(segmento, typst)] preservando l'ordine. Usato anche dalla
+    diagnostica errori per-segmento (ogni typst è compilabile isolatamente)."""
+    out: list[tuple[Segment, str]] = []
+    for idx, seg in enumerate(segment_markdown(md)):
+        if seg.kind == "prose":
+            typ = _render_cmarker(seg.text, f"seg{idx}-")
+        elif seg.kind == "box":
+            inner = _render_cmarker(seg.text, f"box{idx}-")
+            titolo = _typ_str(seg.titolo)
+            typ = (
+                f'#box-evidenza(titolo: "{titolo}", tipo: "{seg.tipo}")'
+                f'[{inner}]'
+            )
+        elif seg.kind == "images":
+            if len(seg.images) == 1:
+                typ = _render_figura(*seg.images[0], image_base=image_base)
+            else:
+                typ = _render_grid(seg.images, image_base)
+        else:  # pragma: no cover
+            typ = ""
+        out.append((seg, typ))
+    return out
+
+
+def render_article_body(md: str, image_base: Optional[str] = None) -> str:
+    """Renderizza il corpo di un articolo in Typst (concatenazione dei segmenti)."""
+    return '\n\n'.join(typ for _seg, typ in render_segments(md, image_base))

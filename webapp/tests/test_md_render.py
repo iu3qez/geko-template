@@ -1,4 +1,7 @@
-from app.services.md_render import segment_markdown, Segment
+from app.services.md_render import (
+    segment_markdown, Segment,
+    _typ_str, render_article_body, render_segments,
+)
 
 
 def test_prosa_semplice_un_segmento():
@@ -46,3 +49,46 @@ def test_immagine_singola_con_width():
 def test_blockquote_normale_resta_prosa():
     segs = segment_markdown("> solo una citazione\n> seconda riga")
     assert len(segs) == 1 and segs[0].kind == "prose"
+
+
+def test_typ_str_escaping():
+    assert _typ_str('a"b\\c') == 'a\\"b\\\\c'
+    assert _typ_str('r1\nr2') == 'r1\\nr2'
+    assert _typ_str('t\tx\r') == 't\\tx'
+
+
+def test_render_prosa_usa_cmarker_con_dollaro_letterale():
+    out = render_article_body("Costo 5$ e _enfasi_")
+    assert '#cmarker.render(' in out
+    assert 'h1-level: 2' in out
+    assert 'scope: geko-md-scope' in out
+    assert 'Costo 5$ e _enfasi_' in out  # embeddato, non trasformato
+
+
+def test_render_box_annidato():
+    md = "> [!TIP] Consiglio\n> testo **forte**"
+    out = render_article_body(md)
+    assert '#box-evidenza(titolo: "Consiglio", tipo: "tip")[' in out
+    assert 'label-prefix:' in out  # cmarker annidato con prefix
+
+
+def test_render_immagine_singola_con_width():
+    out = render_article_body("![Schema](s.png){width=60%}")
+    assert '#figura("s.png"' in out
+    assert 'larghezza: 60%' in out
+
+
+def test_render_griglia_due_immagini():
+    out = render_article_body("![a](a.png)\n![b](b.png)")
+    assert '#grid(' in out and 'columns: (1fr, 1fr)' in out
+
+
+def test_render_image_base_nome_nudo():
+    out = render_article_body("![x](foto.png)", image_base="/data/uploads/articoli/7")
+    assert '"/data/uploads/articoli/7/foto.png"' in out
+
+
+def test_render_segments_ritorna_range():
+    segs = render_segments("Intro\n\n> [!NOTE] N\n> corpo")
+    assert [s.kind for s, _ in segs] == ["prose", "box"]
+    assert all(isinstance(typ, str) and typ for _, typ in segs)
