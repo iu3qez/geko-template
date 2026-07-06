@@ -238,3 +238,27 @@ def render_segments(md: str, image_base: Optional[str] = None) -> list[tuple[Seg
 def render_article_body(md: str, image_base: Optional[str] = None) -> str:
     """Renderizza il corpo di un articolo in Typst (concatenazione dei segmenti)."""
     return '\n\n'.join(typ for _seg, typ in render_segments(md, image_base))
+
+
+def generate_article_typst(
+    titolo: str,
+    sottotitolo: Optional[str],
+    autore: Optional[str],
+    nome: Optional[str],
+    contenuto_md: str,
+    image_base: Optional[str] = None,
+) -> str:
+    """Articolo Typst completo: titolo (H1), sottotitolo, autore, corpo, separatore."""
+    parts = [f'= {titolo}', '']
+    if sottotitolo:
+        parts.append(f'#sottotitolo-sezione[{sottotitolo}]')
+    if autore:
+        if nome:
+            parts.append(f'#autore("{autore}", nome: "{nome}")')
+        else:
+            parts.append(f'#autore("{autore}")')
+    parts.append('')
+    parts.append(render_article_body(contenuto_md, image_base))
+    parts.append('')
+    parts.append('#separatore()')
+    return '\n'.join(parts)
