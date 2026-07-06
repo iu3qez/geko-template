@@ -8,6 +8,7 @@ import typst
 WEBAPP_DIR = Path(__file__).parent.parent.parent
 TYPST_DIR = WEBAPP_DIR / "typst"
 OUTPUT_DIR = WEBAPP_DIR / "data" / "output"
+PKG_PATH = WEBAPP_DIR / "typst" / "packages"
 
 # Determina dove cercare template.typ:
 # - In Docker: /app/typst/template.typ (montato via volume)
@@ -91,7 +92,9 @@ class MagazineBuilder:
         # Compile to PDF
         # Use WEBAPP_DIR as root to access both typst/ and data/ directories
         pdf_path = self.output_dir / f"geko{numero}.pdf"
-        pdf_bytes = typst.compile(str(typ_path), root=str(WEBAPP_DIR))
+        pdf_bytes = typst.compile(
+            str(typ_path), root=str(WEBAPP_DIR), package_path=str(PKG_PATH)
+        )
         pdf_path.write_bytes(pdf_bytes)
 
         return pdf_path
@@ -116,7 +119,8 @@ class MagazineBuilder:
         """Generate complete Typst document."""
         parts = []
 
-        # Import template (path relativo da generated/ a typst/)
+        # Import cmarker (rendering markdown) + template
+        parts.append('#import "@preview/cmarker:0.1.10"')
         parts.append('#import "../template.typ": *')
         parts.append('')
 
