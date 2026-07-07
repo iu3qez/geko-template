@@ -24,9 +24,10 @@ geko-template/
     │   │       ├── images.py      # Upload/gestione immagini (/api/images)
     │   │       └── config.py      # Configurazione (/api/config)
     │   └── services/
-    │       ├── builder.py    # Generazione PDF via Typst
-    │       ├── converter.py  # Conversione Markdown → Typst
-    │       └── llm.py        # Integrazione Anthropic API
+    │       ├── builder.py      # Generazione PDF (Typst) + compressione PDF
+    │       ├── md_render.py    # Segmenter Markdown → Typst via cmarker
+    │       ├── pdf_compress.py # Compressione PDF post-build (Ghostscript)
+    │       └── llm.py          # Integrazione Anthropic API
     ├── frontend/             # SPA SvelteKit (Svelte 5 + TS, adapter-static)
     │   └── build/            # Output build servito dalla FastAPI
     ├── static/               # Asset statici legacy
@@ -64,11 +65,16 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-### Webapp (Docker)
+### Webapp (Docker, sviluppo)
 ```bash
-cd webapp
-docker-compose up -d        # sviluppo
-docker-compose -f docker-compose.prod.yml up -d  # produzione
+cd webapp && docker compose up -d
+```
+
+### Deploy produzione (build locale sull'host, niente registry)
+```bash
+make prod-deploy   # git pull + rebuild immagine + ricrea i container
+make prod-build    # solo build immagine
+make prod-logs     # log del webapp
 ```
 
 ## Template Typst
@@ -138,7 +144,7 @@ salva l'immagine col **nome esatto** sotto `data/uploads/articoli/{id}/{nome_fil
 (scoping per articolo, servita da `/uploads/articoli/{id}/{nome}`). Nel Markdown le
 figure si referenziano col **solo nome file** (`![Schema](x.png)`): i nomi nudi si
 risolvono nella media library dell'articolo tramite il parametro `image_base` di
-`MarkdownToTypstConverter` (`article_ops.article_image_base(id)`), sia in
+`md_render` (`article_ops.article_image_base(id)`), sia in
 `anteprima_typst(..., articolo_id=…)` sia nella build del numero. Formati: PNG,
 JPG/JPEG, GIF, WEBP, SVG. Senza `image_base`/`articolo_id` il comportamento resta
 invariato (nome nudo non rimappato). Logica in `article_ops.save_article_image` /
@@ -161,6 +167,21 @@ geko-mcp; se assente il tool dà errore e la route risponde 503). Gli URL
 scadono dopo `scadenza_minuti` (default 15). Il tool `carica_immagine` base64
 resta per i casi piccoli.
 
+## Rendering Markdown → Typst (cmarker)
+
+Il corpo degli articoli è Markdown, renderizzato **dentro Typst** via
+`@preview/cmarker` (CommonMark→Typst, WASM) — **vendorizzato offline** in
+`webapp/typst/packages/`; ogni `typst.compile(...)` passa `package_path`.
+
+- `md_render.py` fa il *segmenting* per riga: prosa → `cmarker.render(...)`;
+  box → `> [!NOTE|TIP|WARNING|IMPORTANT|CAUTION] Titolo` → `#box-evidenza`;
+  righe di sole immagini → `#figura`/`#grid` (con `{width=N%}`).
+- La prosa viaggia come stringa Typst escaped → niente più errori "unclosed
+  delimiter"; lo stile GEKO è iniettato via `scope`/show-rule.
+- Il vecchio `converter.py` (traduttore markup a mano) è stato **rimosso**.
+
+Dettaglio: `docs/superpowers/specs/2026-07-06-markdown-cmarker-rendering-design.md`.
+
 ## Convenzioni Codice
 
 - **Lingua**: Italiano per UI/commenti, inglese per codice
@@ -174,9 +195,10 @@ resta per i casi piccoli.
 | File | Scopo |
 |------|-------|
 | `template.typ` | Tutti gli stili e funzioni Typst |
-| `webapp/app/services/builder.py` | Generazione PDF |
+| `webapp/app/services/builder.py` | Generazione PDF (Typst) + compressione PDF post-build |
+| `webapp/app/services/md_render.py` | Segmenter Markdown (prosa/box GitHub-alert/immagini) → Typst via cmarker; `image_base` risolve i nomi file nudi |
+| `webapp/app/services/pdf_compress.py` | Compressione PDF post-build via Ghostscript (`/ebook`, fail-safe) |
 | `webapp/app/services/llm.py` | Chiamate Anthropic API |
-| `webapp/app/services/converter.py` | Convenzioni Markdown → Typst (admonition, tabelle, figure, link; `image_base` risolve i nomi file nudi) |
 | `webapp/app/services/article_ops.py` | Fonte unica logica articoli + media library per-articolo (`save/list/delete_article_image`) |
 | `webapp/app/routes/api/images.py` | Logica upload immagini web (flusso separato, prefisso uuid) |
 
@@ -188,6 +210,16 @@ ANTHROPIC_API_KEY=sk-ant-...
 DATABASE_URL=sqlite+aiosqlite:///./data/geko.db
 SECRET_KEY=...
 ```
+
+## Gotcha
+
+- **`template.typ` montato come DIRECTORY** (`/app/typst/src`, non file singolo):
+  un bind-mount di file resta agganciato all'inode iniziale, quindi un `git pull`
+  non sarebbe visto dal container. Il doc generato importa `../src/template.typ`.
+- **`ghostscript`** è nell'immagine Docker: serve alla compressione PDF
+  (`pdf_compress.py`). Senza, la build produce il PDF non compresso (fail-safe).
+- **Deploy = build locale** via Makefile; GHCR/registry eliminato, la CI gira
+  solo i test (`.github/workflows/test.yml`).
 
 ## Testing
 
