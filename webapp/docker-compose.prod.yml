@@ -2,35 +2,30 @@
 # GEKO Magazine - Docker Compose PRODUZIONE
 # =============================================================================
 #
-# Usa l'immagine pre-buildata da GitHub Container Registry (GHCR).
-# Non fa build locale - scarica l'immagine già pronta.
+# Build LOCALE sull'host (niente registry): l'immagine è costruita dal working
+# tree del repo. Usare il Makefile nella root del progetto.
 #
 # Setup iniziale (una volta):
-#   1. Crea secrets:
-#      mkdir -p secrets
-#      echo "sk-ant-api03-xxx" > secrets/anthropic_key.txt
-#      chmod 600 secrets/anthropic_key.txt
+#   mkdir -p secrets
+#   echo "sk-ant-api03-xxx" > secrets/anthropic_key.txt
+#   chmod 600 secrets/anthropic_key.txt
 #
-#   2. Login a GHCR (se repo privato):
-#      echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
+# Uso (dalla root del repo):
+#   make prod-deploy     # git pull + rebuild + ricrea i container
+#   make prod-build      # solo build immagine
+#   make prod-logs       # log del webapp
 #
-# Uso:
-#   # Pull e avvio
-#   docker-compose -f docker-compose.prod.yml pull
-#   docker-compose -f docker-compose.prod.yml up -d
-#
-#   # Aggiornamento (dopo nuovo push su GitHub)
-#   docker-compose -f docker-compose.prod.yml pull
-#   docker-compose -f docker-compose.prod.yml up -d --force-recreate
-#
+# I comandi compose vanno lanciati dalla dir webapp/ (i mount usano ${PWD}).
 # =============================================================================
 
 services:
   webapp:
-    # ===========================================
-    # IMPORTANTE: Modifica con il tuo username!
-    # ===========================================
-    image: ghcr.io/iu3qez/geko-template/geko-webapp:latest
+    # Build locale sull'host (niente registry): l'immagine è costruita dal
+    # working tree del repo. Deploy: `make prod-deploy` (git pull + up -d --build).
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: geko-webapp:local
 
     container_name: geko-webapp
     restart: unless-stopped
@@ -87,7 +82,11 @@ services:
   # gestito da Scalekit dentro il server MCP (come MQC_Award).
   # ---------------------------------------------------------------------------
   geko-mcp:
-    image: ghcr.io/iu3qez/geko-template/geko-webapp:latest
+    # Stessa immagine locale della webapp (build condivisa).
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: geko-webapp:local
     container_name: geko-mcp
     restart: unless-stopped
     command: ["python", "-m", "app.mcp.standalone"]

@@ -1,0 +1,46 @@
+# =============================================================================
+# GEKO Magazine - CI (solo test)
+# =============================================================================
+# Esegue la suite pytest a ogni push su main e su ogni PR.
+# NON builda né pusha immagini Docker: la produzione builda localmente
+# sull'host (vedi Makefile: `make prod-deploy`). Niente registry (GHCR).
+# =============================================================================
+
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Pytest
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: webapp/requirements.txt
+
+      # Ghostscript: i test di compressione PDF lo usano (senza, si auto-skippano).
+      # fonts-dejavu-core: fallback font per la compilazione Typst nei test.
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ghostscript fonts-dejavu-core
+
+      - name: Install Python dependencies
+        working-directory: webapp
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        working-directory: webapp
+        run: python -m pytest -q
