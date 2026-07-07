@@ -95,6 +95,17 @@ class MagazineBuilder:
         )
         pdf_path.write_bytes(pdf_bytes)
 
+        # Post-processing: comprime il PDF (fail-safe, non rompe la build)
+        from .pdf_compress import compress_pdf
+        info = compress_pdf(pdf_path)
+        if info["compressed"]:
+            print(
+                f"PDF compresso: {info['before'] / 1048576:.1f} MB -> "
+                f"{info['after'] / 1048576:.1f} MB"
+            )
+        else:
+            print(f"Compressione PDF saltata: {info.get('reason', '?')}")
+
         return pdf_path
 
     def try_compile_snippet(self, typst_body: str) -> Optional[str]:

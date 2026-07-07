@@ -78,9 +78,11 @@ WORKDIR /app
 # Installa dipendenze runtime
 # - fonts-linuxlibertine: font per Typst
 # - fontconfig: gestione font
+# - ghostscript: compressione PDF post-build (app/services/pdf_compress.py)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-linuxlibertine \
     fontconfig \
+    ghostscript \
     && rm -rf /var/lib/apt/lists/* \
     && fc-cache -fv
 

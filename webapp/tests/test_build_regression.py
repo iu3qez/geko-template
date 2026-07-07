@@ -82,3 +82,20 @@ def test_esempio_convenzioni_compila():
     out = render_article_body(md)
     assert '#box-evidenza' in out and '#grid(' in out and '#figura(' in out
     assert MagazineBuilder().try_compile_snippet(out) is None
+
+
+def test_build_magazine_comprime_se_gs_presente(tmp_path):
+    import shutil
+    from app.services.builder import MagazineBuilder
+    from app.services.md_render import generate_article_typst
+
+    art = generate_article_typst(
+        titolo="Foto", sottotitolo=None, autore="IK2X", nome=None,
+        contenuto_md="![Vetta](/typst/assets/corno-grande-1.jpg)\n"
+                     "![Cresta](/typst/assets/corno-grande-2.jpg)\n",
+    )
+    pdf = MagazineBuilder().build_magazine(
+        numero="93", mese="Luglio", anno="2026", articles_typst=[art],
+    )
+    # La build produce sempre un PDF valido, con o senza Ghostscript.
+    assert pdf.exists() and pdf.read_bytes()[:5] == b"%PDF-"
