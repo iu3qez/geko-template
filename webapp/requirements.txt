@@ -12,7 +12,9 @@ markdown-it-py>=3.0.0
 typst>=0.11.0
 pillow>=10.2.0
 
-fastmcp>=3,<4
+# Pinnato a 3.4.2: la 3.4.3 rompe l'MCP dietro Traefik (421 Misdirected Request,
+# validazione Host/DNS-rebinding più stretta).
+fastmcp==3.4.2
 scalekit-sdk-python>=2.0.0
 pytest>=8.0.0
 pytest-asyncio>=0.24.0
