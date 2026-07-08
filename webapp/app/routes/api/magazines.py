@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import datetime
 import os
+import asyncio
 
 from ...database import get_db
 from ...models import Magazine, MagazineStatus, Article, Image, article_magazines, Config
@@ -295,7 +296,11 @@ async def build_pdf(magazine_id: int, db: AsyncSession = Depends(get_db)):
 
         # Build PDF (not async)
         try:
-            pdf_path = build_magazine_pdf(
+            # In un thread: typst.compile + compressione gs sono sincroni e
+            # pesanti; senza to_thread bloccherebbero l'event loop (healthcheck
+            # fallisce -> container unhealthy -> Traefik 404 sulle altre richieste).
+            pdf_path = await asyncio.to_thread(
+                build_magazine_pdf,
                 numero=magazine.numero,
                 mese=magazine.mese,
                 anno=magazine.anno,
@@ -326,11 +331,11 @@ async def build_pdf(magazine_id: int, db: AsyncSession = Depends(get_db)):
                     contenuto_md=article.contenuto_md or "",
                     image_base=image_base,
                 )
-                if builder.try_compile_snippet(art_typ) is None:
+                if await asyncio.to_thread(builder.try_compile_snippet, art_typ) is None:
                     continue  # questo articolo compila: non è il colpevole
                 found = False
                 for seg, typ in render_segments(article.contenuto_md or "", image_base):
-                    msg = builder.try_compile_snippet(typ)
+                    msg = await asyncio.to_thread(builder.try_compile_snippet, typ)
                     if msg:
                         errori.append({
                             "articolo_id": article.id,
@@ -346,7 +351,7 @@ async def build_pdf(magazine_id: int, db: AsyncSession = Depends(get_db)):
                         "titolo": article.titolo,
                         "segmento": "metadati",
                         "righe": [1, 1],
-                        "errore": builder.try_compile_snippet(art_typ),
+                        "errore": await asyncio.to_thread(builder.try_compile_snippet, art_typ),
                     })
             return {"status": "error", "errori": errori}
 
