@@ -63,13 +63,21 @@ class ClaudeSummaryService:
         self.base_url = "https://api.anthropic.com/v1/messages"
         self.model = model or self.DEFAULT_MODEL
 
-    async def generate_summary(self, article_content: str, article_title: str) -> dict:
+    async def generate_summary(
+        self,
+        article_content: str,
+        article_title: str,
+        autore: str = "",
+        nome: str = "",
+    ) -> dict:
         """
         Generate a summary for an article.
 
         Args:
             article_content: The article content in markdown
             article_title: The article title
+            autore: Nominativo radio dell'autore (call sign, es. "IU3QEZ")
+            nome: Nome reale dell'autore
 
         Returns:
             dict with 'sommario' and 'keywords' keys
@@ -81,10 +89,18 @@ class ClaudeSummaryService:
                 "keywords": []
             }
 
-        prompt = f"""Riassumi questo articolo per una rivista radioamatoriale in 2-3 frasi.
+        # Il sommario deve aprire con "<nominativo> <nome> ci racconta che".
+        autore_label = f"{autore} {nome}".strip()
+        apertura = (
+            f'Inizia con "{autore_label} ci racconta che".\n'
+            if autore_label
+            else ""
+        )
+
+        prompt = f"""Riassumi questo articolo per una rivista radioamatoriale in modo molto conciso: una frase, al massimo due.
 Il riassunto deve essere adatto per la sezione "In Evidenza" della copertina.
 Tono: informale, tecnico ma accessibile.
-
+{apertura}
 Titolo: {article_title}
 
 Contenuto:
@@ -170,7 +186,13 @@ def get_summary_service(model: Optional[str] = None) -> ClaudeSummaryService:
     return ClaudeSummaryService(model=model)
 
 
-async def generate_article_summary(content: str, title: str, model: Optional[str] = None) -> dict:
+async def generate_article_summary(
+    content: str,
+    title: str,
+    model: Optional[str] = None,
+    autore: str = "",
+    nome: str = "",
+) -> dict:
     """
     Convenience function for generating a single summary.
 
@@ -178,9 +200,11 @@ async def generate_article_summary(content: str, title: str, model: Optional[str
         content: Article content in markdown
         title: Article title
         model: Optional Claude model ID (fetched from config by caller)
+        autore: Nominativo radio dell'autore (call sign)
+        nome: Nome reale dell'autore
     """
     service = get_summary_service(model=model)
-    return await service.generate_summary(content, title)
+    return await service.generate_summary(content, title, autore=autore, nome=nome)
 
 
 async def generate_image_caption(image_base64: str, media_type: str) -> dict:

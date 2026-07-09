@@ -433,7 +433,13 @@ async def generate_summary(db, article_id: int) -> Optional[dict]:
     if not article.contenuto_md:
         raise ValueError("L'articolo non ha contenuto da riassumere")
     model = await Config.get(db, "claude_model")
-    summary = await generate_article_summary(article.contenuto_md, article.titolo, model=model)
+    summary = await generate_article_summary(
+        article.contenuto_md,
+        article.titolo,
+        model=model,
+        autore=article.autore or "",
+        nome=article.nome_autore or "",
+    )
     article.sommario_llm = summary.get("sommario", "")
     await db.commit()
     return await _reload(db, article_id)
