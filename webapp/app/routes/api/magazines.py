@@ -390,7 +390,13 @@ async def download_pdf(magazine_id: int, db: AsyncSession = Depends(get_db)):
     return FileResponse(
         pdf_path,
         media_type="application/pdf",
-        filename=pdf_filename
+        filename=pdf_filename,
+        # Il PDF viene rigenerato in-place a ogni build (stesso URL/nome file).
+        # Senza Cache-Control, FileResponse manda solo Last-Modified/ETag e il
+        # browser applica il caching euristico (RFC 9111 §4.2.2), servendo la
+        # copia vecchia dopo un rebuild. no-cache forza la rivalidazione: con
+        # l'ETag che cambia a ogni build si riceve sempre il PDF aggiornato.
+        headers={"Cache-Control": "no-cache"},
     )
 
 
