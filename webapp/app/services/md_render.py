@@ -278,3 +278,11 @@ def generate_article_typst(
     parts.append('')
     parts.append('#separatore()')
     return '\n'.join(parts)
+
+
+# ── Alias pubblici ──────────────────────────────────────────────────
+# Unico punto di escaping per il testo utente interpolato in Typst: usati
+# anche da builder.py (copertina, evidenze, pagina team, pagina finale), così
+# la regola è la stessa ovunque e non si duplica.
+typst_string = _typ_str      # contesto stringa: "..."
+typst_markup = _typ_markup   # contesto markup: [...] / = titolo

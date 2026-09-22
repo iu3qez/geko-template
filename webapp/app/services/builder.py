@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import Optional
 import typst
 
+from .md_render import render_article_body, typst_string
+
 # Paths
 WEBAPP_DIR = Path(__file__).parent.parent.parent
 TYPST_DIR = WEBAPP_DIR / "typst"
@@ -163,14 +165,19 @@ class MagazineBuilder:
             # copertina_path is like "data/uploads/file.png", we add "/" prefix
             abs_copertina = f"/{copertina_path}" if not copertina_path.startswith("/") else copertina_path
             evidenze_typst = self._format_evidenze(evidenze) if evidenze else "()"
+            # L'editoriale è Markdown come i corpi articolo: va renderizzato
+            # con lo stesso percorso (segmenter + cmarker), non interpolato
+            # grezzo. Interpolarlo faceva fallire la compilazione su qualsiasi
+            # heading `# ...` ("the character `#` is not valid in code").
+            editoriale_typst = render_article_body(editoriale) if editoriale else ""
             parts.append(f'''#copertina(
   numero: "{numero}",
   mese: "{mese}",
   anno: "{anno}",
-  immagine-principale: "{abs_copertina}",
+  immagine-principale: "{typst_string(abs_copertina)}",
   evidenze: {evidenze_typst},
-  editoriale-testo: [{(editoriale or "").replace(chr(10), chr(10) + chr(10))}],
-  editoriale-autore: "{editoriale_autore or ""}",
+  editoriale-testo: [{editoriale_typst}],
+  editoriale-autore: "{typst_string(editoriale_autore or "")}",
 )''')
             parts.append('')
 
@@ -221,8 +228,8 @@ class MagazineBuilder:
         """Format highlights list for Typst."""
         items = []
         for ev in evidenze:
-            titolo = ev.get('titolo', '')
-            descrizione = ev.get('descrizione', '')
+            titolo = typst_string(ev.get('titolo', ''))
+            descrizione = typst_string(ev.get('descrizione', ''))
             items.append(f'(titolo: "{titolo}", descrizione: "{descrizione}")')
         return '(\n    ' + ',\n    '.join(items) + ',\n  )'
 
@@ -238,10 +245,11 @@ class MagazineBuilder:
             foto = m.get('foto', '')
             if foto and not foto.startswith('/'):
                 foto = f"/{foto}"
-            nominativo = m.get('nominativo', '')
-            nome = m.get('nome', '')
-            ruolo = m.get('ruolo', '')
-            ruolo2 = m.get('ruolo2', '')
+            foto = typst_string(foto)
+            nominativo = typst_string(m.get('nominativo', ''))
+            nome = typst_string(m.get('nome', ''))
+            ruolo = typst_string(m.get('ruolo', ''))
+            ruolo2 = typst_string(m.get('ruolo2', ''))
 
             member_str = f'(foto: "{foto}", nominativo: "{nominativo}", nome: "{nome}", ruolo: "{ruolo}"'
             if ruolo2:
@@ -251,7 +259,7 @@ class MagazineBuilder:
 
         membri_typst = '(\n    ' + ',\n    '.join(membri_items) + ',\n  )' if membri_items else '()'
 
-        link_str = f'"{link_iscrizione}"' if link_iscrizione else 'none'
+        link_str = f'"{typst_string(link_iscrizione)}"' if link_iscrizione else 'none'
 
         return f'''#pagina-team(
   membri: {membri_typst},
@@ -272,10 +280,10 @@ class MagazineBuilder:
         if immagine_donazione and not immagine_donazione.startswith('/'):
             immagine_donazione = f"/{immagine_donazione}"
 
-        link_lista_str = f'"{link_lista_distribuzione}"' if link_lista_distribuzione else 'none'
-        link_donazione_str = f'"{link_donazione}"' if link_donazione else 'none'
-        img_freq_str = f'"{immagine_frequenze}"' if immagine_frequenze else 'none'
-        img_don_str = f'"{immagine_donazione}"' if immagine_donazione else 'none'
+        link_lista_str = f'"{typst_string(link_lista_distribuzione)}"' if link_lista_distribuzione else 'none'
+        link_donazione_str = f'"{typst_string(link_donazione)}"' if link_donazione else 'none'
+        img_freq_str = f'"{typst_string(immagine_frequenze)}"' if immagine_frequenze else 'none'
+        img_don_str = f'"{typst_string(immagine_donazione)}"' if immagine_donazione else 'none'
 
         return f'''#pagina-finale(
   link-lista-distribuzione: {link_lista_str},
