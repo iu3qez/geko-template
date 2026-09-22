@@ -40,3 +40,6 @@ test*.pdf
 
 .tldr
 .tldrignore
+
+# Worktree di lavoro di Claude Code (copie complete del repo, non vanno committate)
+.claude/worktrees/
