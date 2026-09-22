@@ -12,10 +12,31 @@ import os
 import asyncio
 
 from ...database import get_db
-from ...models import Magazine, MagazineStatus, Article, Image, article_magazines, Config
+from ...models import Magazine, MagazineStatus, Article, Image, article_magazines, Config, utcnow
 import json
 
 router = APIRouter(prefix="/magazines")
+
+
+def _as_naive_utc(dt):
+    """Normalizza un datetime a naive-UTC per confronti sicuri (SQLite li salva naive)."""
+    if dt is None:
+        return None
+    if dt.tzinfo is not None:
+        from datetime import timezone
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
+
+def magazine_pdf_stale(magazine: Magazine) -> bool:
+    """True se i contenuti (numero + articoli) sono cambiati dopo l'ultima build."""
+    built = _as_naive_utc(magazine.pdf_built_at)
+    if built is None:
+        return False
+    candidates = [magazine.updated_at]
+    candidates.extend(a.updated_at for a in magazine.articles)
+    content_updated = max(_as_naive_utc(c) for c in candidates if c is not None)
+    return content_updated > built
 
 
 class MagazineBase(BaseModel):
@@ -106,6 +127,8 @@ def magazine_to_response(magazine: Magazine) -> dict:
         } if magazine.copertina else None,
         "created_at": magazine.created_at.isoformat() if magazine.created_at else None,
         "updated_at": magazine.updated_at.isoformat() if magazine.updated_at else None,
+        "pdf_built_at": magazine.pdf_built_at.isoformat() if magazine.pdf_built_at else None,
+        "pdf_stale": magazine_pdf_stale(magazine),
         "articles": [
             {
                 "id": a.id,
@@ -356,7 +379,16 @@ async def build_pdf(magazine_id: int, db: AsyncSession = Depends(get_db)):
             return {"status": "error", "errori": errori}
 
         # Update magazine status
+        # NB: assegniamo anche updated_at qui esplicitamente. Magazine.updated_at
+        # ha onupdate=utcnow, che scatta su QUALSIASI UPDATE della riga (non solo
+        # se updated_at viene toccato a mano); senza questa riga, il semplice
+        # commit che marca pdf_built_at farebbe scattare l'onupdate con un
+        # timestamp calcolato pochi microsecondi DOPO pdf_built_at, rendendo il
+        # numero "stale" nell'istante stesso in cui la build termina.
+        build_completed_at = utcnow()
         magazine.stato = MagazineStatus.PUBBLICATO
+        magazine.pdf_built_at = build_completed_at
+        magazine.updated_at = build_completed_at
         await db.commit()
 
         return {
@@ -423,6 +455,7 @@ async def reorder_articles(
             .values(ordine=idx)
         )
 
+    magazine.updated_at = utcnow()
     await db.commit()
 
     return {"status": "reordered"}
@@ -475,6 +508,7 @@ async def add_article(
         .values(ordine=ordine)
     )
 
+    magazine.updated_at = utcnow()
     await db.commit()
 
     return {"status": "added", "ordine": ordine}
@@ -496,6 +530,12 @@ async def remove_article(
 
     if result.rowcount == 0:
         raise HTTPException(status_code=404, detail="Article not in magazine")
+
+    magazine = (
+        await db.execute(select(Magazine).where(Magazine.id == magazine_id))
+    ).scalar_one_or_none()
+    if magazine:
+        magazine.updated_at = utcnow()
 
     await db.commit()
 

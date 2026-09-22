@@ -4,7 +4,7 @@
 	import { goto } from '$app/navigation';
 	import {
 		ArrowLeft, Edit, Download, FileText, Plus, Trash2,
-		ChevronUp, ChevronDown, CheckCircle, AlertCircle, Loader, Image as ImageIcon
+		ChevronUp, ChevronDown, CheckCircle, AlertCircle, Loader, Image as ImageIcon, AlertTriangle
 	} from 'lucide-svelte';
 	import { Button, Badge, Card, Loading, Modal, Input, Textarea, Select } from '$lib/components/ui';
 	import { magazines, articles as articlesApi, images as imagesApi } from '$lib/api';
@@ -335,6 +335,12 @@
 					{/snippet}
 
 					<div class="actions-list">
+						{#if magazine.pdf_stale}
+							<div class="stale-warning">
+								<AlertTriangle size={18} />
+								<span>I contenuti sono cambiati dopo l'ultima generazione del PDF. Rigenera per allineare il PDF.</span>
+							</div>
+						{/if}
 						<Button onclick={handleBuild} loading={building} disabled={magazine.articles.length === 0}>
 							{#if building}
 								Generazione in corso...
@@ -592,6 +598,17 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-3);
+	}
+
+	.stale-warning {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		padding: var(--space-3);
+		border-radius: var(--radius-md);
+		background: var(--color-warning-light, #fef3c7);
+		color: var(--color-warning, #b45309);
+		font-size: var(--text-sm);
 	}
 
 	.build-result {

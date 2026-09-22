@@ -22,6 +22,11 @@ data/geko.db
 data/images/*
 data/output/*
 data/articles/*
+# Media library per-articolo + copertine (dati di PRODUZIONE). DEVE stare qui:
+# il checkout main è anche la dir di deploy, e un `git clean -fd` cancellerebbe
+# questi file se non ignorati (è già successo: 9/7/2026, uploads azzerata).
+data/uploads/*
+!data/uploads/.gitkeep
 !data/.gitkeep
 
 # Typst generato

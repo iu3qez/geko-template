@@ -12,7 +12,7 @@ import uuid
 import aiofiles
 
 from ...database import get_db
-from ...models import Image, Article, Magazine, MagazineStatus
+from ...models import Image, Article, Magazine, MagazineStatus, utcnow
 
 router = APIRouter(prefix="/images")
 
@@ -161,9 +161,11 @@ async def upload_image(
         await f.write(content)
 
     # Validate article_id if provided
+    article = None
     if article_id:
         art_result = await db.execute(select(Article).where(Article.id == article_id))
-        if not art_result.scalar_one_or_none():
+        article = art_result.scalar_one_or_none()
+        if not article:
             article_id = None
 
     # Create database record
@@ -174,6 +176,12 @@ async def upload_image(
         article_id=article_id
     )
     db.add(image)
+
+    # L'immagine finisce nel markdown dell'articolo (![alt](/uploads/...)) e
+    # viene renderizzata nel PDF: va marcata come modifica di contenuto.
+    if article:
+        article.updated_at = utcnow()
+
     await db.commit()
     await db.refresh(image)
 
@@ -191,9 +199,11 @@ async def upload_images_batch(
     errors = []
 
     # Validate article_id once
+    article = None
     if article_id:
         art_result = await db.execute(select(Article).where(Article.id == article_id))
-        if not art_result.scalar_one_or_none():
+        article = art_result.scalar_one_or_none()
+        if not article:
             article_id = None
 
     for file in files:
@@ -250,6 +260,11 @@ async def upload_images_batch(
                 "error": str(e)
             })
 
+    # Un solo articolo condiviso da tutto il batch: basta un bump.
+    if article and results:
+        article.updated_at = utcnow()
+        await db.commit()
+
     return {
         "images": results,
         "errors": errors
@@ -270,6 +285,8 @@ async def update_image(
     if not image:
         raise HTTPException(status_code=404, detail="Image not found")
 
+    previous_article_id = image.article_id
+
     # Update fields
     if data.alt_text is not None:
         image.alt_text = data.alt_text
@@ -283,6 +300,19 @@ async def update_image(
             image.article_id = data.article_id
         else:
             image.article_id = None
+
+    # L'immagine (alt_text incluso, che appare come didascalia nel PDF) e la
+    # sua eventuale riassegnazione ad altro articolo cambiano il rendering:
+    # marchiamo come modificati sia l'articolo di origine sia quello nuovo.
+    affected_article_ids = {
+        aid for aid in (previous_article_id, image.article_id) if aid
+    }
+    for aid in affected_article_ids:
+        article = (
+            await db.execute(select(Article).where(Article.id == aid))
+        ).scalar_one_or_none()
+        if article:
+            article.updated_at = utcnow()
 
     await db.commit()
     await db.refresh(image)
@@ -300,12 +330,24 @@ async def delete_image(image_id: int, db: AsyncSession = Depends(get_db)):
     if not image:
         raise HTTPException(status_code=404, detail="Image not found")
 
+    # Cattura l'article_id PRIMA di cancellare la riga: rimuovere un'immagine
+    # referenziata nel markdown cambia il rendering dell'articolo.
+    article_id = image.article_id
+
     # Delete file from disk
     if os.path.exists(image.path):
         os.remove(image.path)
 
     # Delete database record
     await db.delete(image)
+
+    if article_id:
+        article = (
+            await db.execute(select(Article).where(Article.id == article_id))
+        ).scalar_one_or_none()
+        if article:
+            article.updated_at = utcnow()
+
     await db.commit()
 
     return {"status": "deleted"}

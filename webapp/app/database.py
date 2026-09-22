@@ -16,18 +16,26 @@ async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit
 
 def run_migrations(conn):
     """Run schema migrations for existing databases (sync, called via run_sync)."""
-    # Get existing columns in images table
-    try:
-        result = conn.execute(text("PRAGMA table_info(images)"))
-        existing_columns = {row[1] for row in result.fetchall()}
-    except Exception:
-        return  # Table doesn't exist yet
+    def columns(table):
+        try:
+            result = conn.execute(text(f"PRAGMA table_info({table})"))
+            return {row[1] for row in result.fetchall()}
+        except Exception:
+            return None
 
-    # Add alt_text column if missing
-    if "alt_text" not in existing_columns:
+    images_cols = columns("images")
+    if images_cols is not None and "alt_text" not in images_cols:
         try:
             conn.execute(text("ALTER TABLE images ADD COLUMN alt_text TEXT DEFAULT ''"))
             print("Migration: added alt_text column to images")
+        except Exception as e:
+            print(f"Migration warning: {e}")
+
+    magazines_cols = columns("magazines")
+    if magazines_cols is not None and "pdf_built_at" not in magazines_cols:
+        try:
+            conn.execute(text("ALTER TABLE magazines ADD COLUMN pdf_built_at DATETIME"))
+            print("Migration: added pdf_built_at column to magazines")
         except Exception as e:
             print(f"Migration warning: {e}")
 

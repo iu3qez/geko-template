@@ -33,6 +33,8 @@ export interface Magazine {
 	copertina: Image | null;
 	created_at: string;
 	updated_at: string;
+	pdf_built_at: string | null;
+	pdf_stale?: boolean;
 	articles: Article[];
 	article_count?: number;
 }

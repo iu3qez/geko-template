@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from app.models import Article
 from app.services import article_ops
 
 # 1x1 PNG trasparente
@@ -134,3 +135,36 @@ async def test_delete_missing_raises(db, uploads_tmp):
     art_id = await _make_article(db)
     with pytest.raises(ValueError):
         await article_ops.delete_article_image(db, art_id, "nope.png")
+
+
+async def test_save_image_bumps_article_updated_at(db, uploads_tmp):
+    art = Article(titolo="Img", contenuto_md="x")
+    db.add(art)
+    await db.commit()
+    await db.refresh(art)
+    before = art.updated_at
+
+    png = b"\x89PNG\r\n\x1a\n" + b"0" * 32
+    await article_ops.save_article_image(db, art.id, "foto.png", png)
+
+    await db.refresh(art)
+    assert art.updated_at is not None
+    assert art.updated_at != before
+
+
+async def test_delete_image_bumps_article_updated_at(db, uploads_tmp):
+    art = Article(titolo="Img", contenuto_md="x")
+    db.add(art)
+    await db.commit()
+    await db.refresh(art)
+
+    png = b"\x89PNG\r\n\x1a\n" + b"0" * 32
+    await article_ops.save_article_image(db, art.id, "foto.png", png)
+    await db.refresh(art)
+    before = art.updated_at
+
+    await article_ops.delete_article_image(db, art.id, "foto.png")
+
+    await db.refresh(art)
+    assert art.updated_at is not None
+    assert art.updated_at != before

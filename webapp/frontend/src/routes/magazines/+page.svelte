@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { Plus, Calendar, FileText, Download, Trash2 } from 'lucide-svelte';
+	import { Plus, Calendar, FileText, Download, Trash2, AlertTriangle } from 'lucide-svelte';
 	import { Button, Card, Badge, Loading, EmptyState, Modal } from '$lib/components/ui';
 	import { magazines } from '$lib/api';
 	import type { Magazine } from '$lib/api';
@@ -11,6 +11,8 @@
 	let deleteModal = $state(false);
 	let magazineToDelete = $state<Magazine | null>(null);
 	let deleting = $state(false);
+	let buildingIds = $state<Set<number>>(new Set());
+	let buildResults = $state<Record<number, { status: string; error?: string }>>({});
 
 	onMount(async () => {
 		await loadMagazines();
@@ -46,6 +48,30 @@
 			error = e instanceof Error ? e.message : 'Errore durante la cancellazione';
 		} finally {
 			deleting = false;
+		}
+	}
+
+	async function handleBuild(magazine: Magazine) {
+		if (magazine.article_count === 0) return;
+		buildingIds = new Set(buildingIds).add(magazine.id);
+		const clearedResults = { ...buildResults };
+		delete clearedResults[magazine.id];
+		buildResults = clearedResults;
+		try {
+			const result = await magazines.build(magazine.id);
+			buildResults = { ...buildResults, [magazine.id]: result };
+			if (result.status === 'success') {
+				await loadMagazines();
+			}
+		} catch (e) {
+			buildResults = {
+				...buildResults,
+				[magazine.id]: { status: 'error', error: e instanceof Error ? e.message : 'Errore' }
+			};
+		} finally {
+			const next = new Set(buildingIds);
+			next.delete(magazine.id);
+			buildingIds = next;
 		}
 	}
 </script>
@@ -118,9 +144,24 @@
 					</div>
 
 					{#snippet footer()}
+						{#if magazine.pdf_stale}
+							<div class="stale-warning">
+								<AlertTriangle size={14} />
+								<span>Contenuti modificati — rigenera</span>
+							</div>
+						{/if}
 						<div class="magazine-actions">
 							<Button href="/magazines/{magazine.id}" variant="outline" size="sm">
 								Dettagli
+							</Button>
+							<Button
+								size="sm"
+								onclick={() => handleBuild(magazine)}
+								loading={buildingIds.has(magazine.id)}
+								disabled={magazine.article_count === 0}
+							>
+								<FileText size={14} />
+								Genera PDF
 							</Button>
 							{#if magazine.stato === 'pubblicato'}
 								<Button
@@ -140,6 +181,15 @@
 								<Trash2 size={14} />
 							</Button>
 						</div>
+						{#if buildResults[magazine.id]}
+							<div class="build-result build-{buildResults[magazine.id].status}">
+								{#if buildResults[magazine.id].status === 'success'}
+									PDF generato con successo!
+								{:else}
+									{buildResults[magazine.id].error || 'Errore durante la generazione'}
+								{/if}
+							</div>
+						{/if}
 					{/snippet}
 				</Card>
 			{/each}
@@ -240,6 +290,35 @@
 	.magazine-actions {
 		display: flex;
 		gap: var(--space-2);
+	}
+
+	.stale-warning {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		color: var(--color-warning, #b45309);
+		font-size: var(--text-sm);
+		margin-bottom: var(--space-2);
+	}
+
+	.build-result {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		padding: var(--space-3);
+		border-radius: var(--radius-md);
+		margin-top: var(--space-4);
+		font-size: var(--text-sm);
+	}
+
+	.build-success {
+		background: var(--color-success-light);
+		color: var(--color-success);
+	}
+
+	.build-error {
+		background: var(--color-danger-light);
+		color: var(--color-danger);
 	}
 
 	.error-message {

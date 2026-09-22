@@ -12,7 +12,7 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from ..models import Article, Config, Image, Magazine, MagazineStatus
+from ..models import Article, Config, Image, Magazine, MagazineStatus, utcnow
 
 # ── Media library per-articolo ─────────────────────────────────────────
 # Le immagini caricate via MCP/API sono salvate col loro nome esatto sotto
@@ -371,6 +371,7 @@ async def save_article_image(
             article_id=article_id,
         )
         db.add(image)
+    article.updated_at = utcnow()
     await db.commit()
     await db.refresh(image)
 
@@ -418,6 +419,11 @@ async def delete_article_image(db, article_id: int, nome_file: str) -> bool:
     if image.path and os.path.exists(image.path):
         os.remove(image.path)
     await db.delete(image)
+    article = (
+        await db.execute(select(Article).where(Article.id == article_id))
+    ).scalar_one_or_none()
+    if article:
+        article.updated_at = utcnow()
     await db.commit()
     return True
 

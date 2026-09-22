@@ -40,6 +40,7 @@ class Magazine(Base):
     editoriale = Column(Text, default="")
     editoriale_autore = Column(String(100), default="")
     copertina_id = Column(Integer, ForeignKey("images.id"), nullable=True)
+    pdf_built_at = Column(DateTime, nullable=True)  # ultima generazione PDF riuscita
     created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
