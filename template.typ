@@ -29,29 +29,48 @@
 }
 
 // ============================================
+// SCALA TIPOGRAFICA (unica per tutto il documento)
+// Corpo 11pt; ogni livello di titolo è più grande del corpo e
+// distinguibile dal successivo. Usata da `stile-geko`, dalle funzioni
+// titolo/sottotitolo/autore e dalla copertina (editoriale).
+// ============================================
+
+#let geko-font = ("Libertinus Serif", "Linux Libertine O", "DejaVu Serif")
+#let geko-size = (
+  corpo: 11.5pt,
+  h1: 18pt,      // titolo articolo (maiuscolo magenta, riga oro)
+  h2: 14pt,      // sezione (maiuscolo magenta)
+  h3: 12.5pt,    // sottosezione (grassetto scuro)
+  h4: 11.5pt,    // paragrafo (grassetto corsivo scuro)
+  sottotitolo: 13pt,
+  autore: 10.5pt,
+  piccolo: 9pt,  // header/footer, didascalie, tabelle
+)
+
+// ============================================
 // FUNZIONE: Titolo articolo principale
 // (maiuscolo, magenta, linea oro sotto)
 // ============================================
 
 #let titolo-articolo(testo) = {
-  v(1em)
-  block(width: 100%)[
+  block(width: 100%, above: 1em, below: 1em, sticky: true)[
     #set par(justify: false)
-    #text(size: 16pt, weight: "bold", fill: geko-magenta, tracking: 0.5pt)[#upper(testo)]
+    #text(size: geko-size.h1, weight: "bold", fill: geko-magenta, tracking: 0.5pt)[#upper(testo)]
     #v(4pt)
     #line(length: 100%, stroke: 2pt + geko-gold)
   ]
-  v(0.8em)
 }
 
 // ============================================
-// FUNZIONE: Sottotitolo di sezione
+// FUNZIONE: Sottotitolo (occhiello) dell'articolo
+// Corsivo magenta: si distingue dai titoli di sezione (maiuscoli)
 // ============================================
 
 #let sottotitolo-sezione(testo) = {
-  v(0.6em)
-  text(size: 12pt, weight: "bold", fill: geko-magenta)[#upper(testo)]
-  v(0.4em)
+  block(width: 100%, above: 0.4em, below: 0.6em, sticky: true)[
+    #set par(justify: false)
+    #text(size: geko-size.sottotitolo, style: "italic", fill: geko-magenta)[#testo]
+  ]
 }
 
 // ============================================
@@ -59,14 +78,114 @@
 // ============================================
 
 #let autore(nominativo, nome: none) = {
-  v(0.2em)
-  if nome != none {
-    text(size: 10pt, style: "italic")[#nome #nominativo]
-  } else {
-    text(size: 10pt, style: "italic")[#nominativo]
-  }
-  v(0.6em)
+  block(width: 100%, above: 0.2em, below: 1.2em, sticky: true)[
+    #set text(size: geko-size.autore, style: "italic")
+    #if nome != none [#nome #nominativo] else [#nominativo]
+  ]
 }
+
+// ============================================
+// STILE TIPOGRAFICO GEKO
+// Font, corpo, paragrafi, gerarchia titoli, link, liste, tabelle.
+// Applicato da copertina/pagina-logo/sommario/geko-magazine, così
+// editoriale e articoli condividono la stessa resa grafica.
+// Usabile anche direttamente: `#show: stile-geko`.
+// ============================================
+
+#let stile-geko(contenuto) = {
+  set text(
+    font: geko-font,
+    size: geko-size.corpo,
+    lang: "it",
+    fill: geko-dark,
+  )
+
+  // Paragrafi giustificati
+  set par(
+    justify: true,
+    leading: 0.68em,
+    spacing: 1em,
+    first-line-indent: 0em,
+  )
+
+  // Heading senza numerazione
+  set heading(numbering: none)
+
+  // Tabelle da markdown (cmarker emette #table nativo) con look GEKO
+  set table(
+    fill: (x, y) => if y == 0 { geko-gold } else if calc.odd(y) { geko-light } else { white },
+    stroke: 0.5pt + geko-dark.lighten(60%),
+    inset: 6pt,
+  )
+  show table.cell.where(y: 0): set text(fill: white, weight: "bold", size: geko-size.piccolo)
+  show table: set text(size: geko-size.piccolo)
+
+  // H1 = Titolo articolo principale (inizia a pagina nuova)
+  show heading.where(level: 1): it => {
+    pagebreak(weak: true)
+    titolo-articolo(it.body)
+  }
+
+  // H2 = Sezione (maiuscolo magenta)
+  show heading.where(level: 2): it => {
+    block(width: 100%, above: 1.4em, below: 0.6em, sticky: true)[
+      #set par(justify: false)
+      #text(size: geko-size.h2, weight: "bold", fill: geko-magenta, tracking: 0.3pt)[#upper(it.body)]
+    ]
+  }
+
+  // H3 = Sottosezione (grassetto scuro)
+  show heading.where(level: 3): it => {
+    block(width: 100%, above: 1.2em, below: 0.5em, sticky: true)[
+      #set par(justify: false)
+      #text(size: geko-size.h3, weight: "bold", fill: geko-dark)[#it.body]
+    ]
+  }
+
+  // H4+ = Paragrafo (grassetto corsivo scuro)
+  show heading.where(level: 4): it => {
+    block(width: 100%, above: 1em, below: 0.4em, sticky: true)[
+      #set par(justify: false)
+      #text(size: geko-size.h4, weight: "bold", style: "italic", fill: geko-dark)[#it.body]
+    ]
+  }
+
+  // Link in magenta
+  show link: it => text(fill: geko-magenta)[#it]
+
+  // Liste puntate con bullet dorato
+  set list(marker: text(fill: geko-gold, size: 8pt)[●])
+
+  // Liste numerate
+  set enum(numbering: "1.")
+
+  contenuto
+}
+
+// ============================================
+// PAGINA STANDARD (tutte le pagine interne)
+// Header: testata + numero pagina, riga oro; footer: testata.
+// Ritorna il dizionario di argomenti per `set page(..)`.
+// ============================================
+
+#let pagina-standard(numero, mese, anno) = (
+  paper: "a4",
+  margin: (top: 2.5cm, bottom: 2cm, left: 2cm, right: 2cm),
+  header: {
+    grid(
+      columns: (1fr, auto),
+      align(left + horizon)[
+        #text(size: geko-size.piccolo, fill: geko-dark)[Geko Radio Magazine – Nr. #numero | #mese - #anno]
+      ],
+      align(right + horizon)[#page-number-box()]
+    )
+    v(-0.2em)
+    line(length: 100%, stroke: 0.5pt + geko-gold)
+  },
+  footer: align(center)[
+    #text(size: geko-size.piccolo, fill: geko-dark)[Geko Radio Magazine – Nr. #numero | #mese - #anno]
+  ],
+)
 
 // ============================================
 // FUNZIONE: Link stilizzato (magenta)
@@ -100,7 +219,7 @@
     stroke: 0.5pt + c.bordo,
     [
       #if titolo != none and titolo != "" {
-        text(weight: "bold", fill: c.titolo, size: 11pt)[#titolo]
+        text(weight: "bold", fill: c.titolo)[#titolo]
         v(0.4em)
       }
       #contenuto
@@ -165,6 +284,10 @@
     footer: none,
   )
 
+  // Stesso font/corpo/titoli degli articoli: l'editoriale (Markdown reso
+  // via cmarker) deve avere la stessa resa grafica del resto della rivista.
+  show: stile-geko
+
   // Colonna destra (IN EVIDENZA) — invariata, estratta per riuso
   let colonna-destra = block(
     width: 100%,
@@ -213,14 +336,11 @@
     text(size: 14pt, weight: "bold", fill: geko-gold)[EDITORIALE]
     v(0.5em)
   }
-  let corpo-editoriale = {
-    set text(size: 11pt, fill: geko-dark)
-    set par(justify: true, leading: 0.55em)
-    editoriale-testo
-  }
+  // Corpo: eredita font/corpo/paragrafi da stile-geko (identici agli articoli)
+  let corpo-editoriale = editoriale-testo
   let firma = {
     v(0.6em)
-    text(size: 11pt, weight: "bold", fill: geko-dark)[#editoriale-autore]
+    text(weight: "bold", fill: geko-dark)[#editoriale-autore]
   }
 
   // Decidiamo layout in base allo spazio: se l'editoriale entra nella colonna
@@ -281,26 +401,14 @@
     pagebreak()
 
     // Pagina editoriale dedicata (solo se l'editoriale non entrava in copertina)
+    // Impaginata come un articolo: stessa pagina standard (testata, riga
+    // oro, numero), stesso titolo (maiuscolo magenta) e stesso corpo.
     if overflow {
-      set page(
-        paper: "a4",
-        margin: (top: 2cm, bottom: 2cm, left: 2cm, right: 2cm),
-        header: align(right)[#page-number-box()],
-        footer: align(center)[
-          #text(size: 9pt, fill: geko-dark)[Geko Radio Magazine – Nr. #numero | #mese - #anno]
-        ],
-      )
-      text(size: 22pt, weight: "bold", fill: geko-magenta)[Editoriale]
-      v(0.3em)
-      line(length: 100%, stroke: 1pt + geko-gold)
+      set page(..pagina-standard(numero, mese, anno))
+      titolo-articolo("Editoriale")
+      editoriale-testo
       v(0.8em)
-      block({
-        set text(size: 11pt, fill: geko-dark)
-        set par(justify: true, leading: 0.6em, first-line-indent: 1em)
-        editoriale-testo
-      })
-      v(0.8em)
-      align(right, text(size: 11pt, weight: "bold", fill: geko-dark)[#editoriale-autore])
+      align(right, text(weight: "bold", fill: geko-dark)[#editoriale-autore])
       pagebreak()
     }
   }
@@ -318,14 +426,8 @@
   logo-rivista: none,
   sottotitolo-testo: "Il GEKO RADIO MAGAZINE – Rivista aperiodica del Mountain QRP Club.",
 ) = {
-  set page(
-    paper: "a4",
-    margin: (top: 2cm, bottom: 2cm, left: 2cm, right: 2cm),
-    header: align(right)[#page-number-box()],
-    footer: align(center)[
-      #text(size: 9pt, fill: geko-dark)[Geko Radio Magazine – Nr. #numero | #mese - #anno]
-    ],
-  )
+  set page(..pagina-standard(numero, mese, anno))
+  show: stile-geko
 
   v(1fr)
 
@@ -350,14 +452,8 @@
 // ============================================
 
 #let sommario(numero: "66", mese: "Agosto", anno: "2025") = {
-  set page(
-    paper: "a4",
-    margin: (top: 2cm, bottom: 2cm, left: 2cm, right: 2cm),
-    header: align(right)[#page-number-box()],
-    footer: align(center)[
-      #text(size: 9pt, fill: geko-dark)[Geko Radio Magazine – Nr. #numero | #mese - #anno]
-    ],
-  )
+  set page(..pagina-standard(numero, mese, anno))
+  show: stile-geko
 
   // Titolo SOMMARIO
   text(size: 22pt, weight: "bold", fill: geko-gold, tracking: 1pt)[SOMMARIO]
@@ -397,82 +493,10 @@
     author: "Mountain QRP Club",
   )
 
-  // Impostazioni pagina standard per articoli
-  set page(
-    paper: "a4",
-    margin: (top: 2.5cm, bottom: 2cm, left: 2cm, right: 2cm),
-    header: {
-      grid(
-        columns: (1fr, auto),
-        align(left + horizon)[
-          #text(size: 9pt, fill: geko-dark)[Geko Radio Magazine – Nr. #numero | #mese - #anno]
-        ],
-        align(right + horizon)[#page-number-box()]
-      )
-      v(-0.2em)
-      line(length: 100%, stroke: 0.5pt + geko-gold)
-    },
-    footer: align(center)[
-      #text(size: 9pt, fill: geko-dark)[Geko Radio Magazine – Nr. #numero | #mese - #anno]
-    ],
-  )
-
-  // Font principale (Latin Modern Roman simile a Libertine)
-  set text(
-    font: ("Latin Modern Roman", "DejaVu Serif", "FreeSerif"),
-    size: 12pt,
-    lang: "it",
-    fill: geko-dark,
-  )
-
-  // Paragrafi giustificati
-  set par(
-    justify: true,
-    leading: 0.65em,
-    spacing: 1.1em,
-    first-line-indent: 0em,
-  )
-
-  // Heading senza numerazione
-  set heading(numbering: none)
-
-  // Tabelle da markdown (cmarker emette #table nativo) con look GEKO
-  set table(
-    fill: (x, y) => if y == 0 { geko-gold } else if calc.odd(y) { geko-light } else { white },
-    stroke: 0.5pt + geko-dark.lighten(60%),
-    inset: 6pt,
-  )
-  show table.cell.where(y: 0): set text(fill: white, weight: "bold", size: 9pt)
-  show table: set text(size: 9pt)
-
-  // H1 = Titolo articolo principale (inizia a pagina nuova)
-  show heading.where(level: 1): it => {
-    pagebreak(weak: true)
-    titolo-articolo(it.body)
-  }
-
-  // H2 = Sottosezione (maiuscolo magenta)
-  show heading.where(level: 2): it => {
-    v(0.8em)
-    text(size: 12pt, weight: "bold", fill: geko-magenta)[#upper(it.body)]
-    v(0.4em)
-  }
-
-  // H3 = Sotto-sottosezione
-  show heading.where(level: 3): it => {
-    v(0.5em)
-    text(size: 11pt, weight: "bold", fill: geko-dark)[#it.body]
-    v(0.3em)
-  }
-
-  // Link in magenta
-  show link: it => text(fill: geko-magenta)[#it]
-
-  // Liste puntate con bullet dorato
-  set list(marker: text(fill: geko-gold, size: 8pt)[●])
-
-  // Liste numerate
-  set enum(numbering: "1.")
+  // Impostazioni pagina standard per articoli (condivise con editoriale,
+  // pagina logo e sommario) + stile tipografico unico
+  set page(..pagina-standard(numero, mese, anno))
+  show: stile-geko
 
   contenuto
 }
@@ -758,7 +782,7 @@
   figure(
     image(percorso, width: larghezza),
     caption: if didascalia != none {
-      text(size: 9pt, style: "italic")[#didascalia]
+      text(size: geko-size.piccolo, style: "italic")[#didascalia]
     },
     supplement: none,
     numbering: none,

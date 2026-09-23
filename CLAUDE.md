@@ -85,11 +85,22 @@ make prod-logs     # log del webapp
 - `geko-dark` (#333333) - Testo principale
 - `geko-light` (#F5F5F5) - Sfondi box
 
+### Tipografia (unica per tutto il documento)
+`stile-geko` (font, corpo, gerarchia titoli, link, liste, tabelle) e
+`pagina-standard(numero, mese, anno)` (header/footer/margini) sono applicati
+da `copertina`, `pagina-logo`, `sommario` e `geko-magazine`: editoriale e
+articoli hanno la stessa resa. Scala in `geko-size` (corpo 11.5pt; H1 18pt
+maiuscolo magenta, H2 14pt maiuscolo magenta, H3 12.5pt grassetto, H4 corsivo
+grassetto). Font `Libertinus Serif` (incorporato in Typst → identico su
+dev/CI/prod; fallback Linux Libertine O, DejaVu Serif). Test:
+`webapp/tests/test_layout_consistency.py`.
+
 ### Funzioni principali
 ```typst
 #copertina(numero, mese, anno, immagine-principale, evidenze, ...)
-#pagina-logo(logo-grande, sottotitolo)
-#geko-magazine.with(numero, mese, anno)  // show rule
+#pagina-logo(numero, mese, anno, logo-rivista, sottotitolo-testo)
+#geko-magazine.with(numero, mese, anno)  // show rule (pagina + stile-geko)
+#stile-geko                                // solo stile, senza set page
 #sommario()
 #titolo-articolo(testo)
 #sottotitolo[testo]
