@@ -42,8 +42,11 @@
 // ============================================
 
 #pagina-logo(
-  logo-grande: "assets/logo-mqc-grande.png",
-  sottotitolo: "Il GEKO RADIO MAGAZINE – Rivista aperiodica del Mountain QRP Club.",
+  numero: "67",
+  mese: "Settembre",
+  anno: "2025",
+  logo-rivista: "assets/logo-mqc-grande.png",
+  sottotitolo-testo: "Il GEKO RADIO MAGAZINE – Rivista aperiodica del Mountain QRP Club.",
 )
 
 // ============================================
@@ -60,7 +63,7 @@
 // SOMMARIO
 // ============================================
 
-#sommario()
+#sommario(numero: "67", mese: "Settembre", anno: "2025")
 
 // ============================================
 // ARTICOLO 1: ATTIVITA' ESTIVE
@@ -68,7 +71,7 @@
 
 = Attività Estive dei Soci <attivita-estive>
 
-#sottotitolo[Un'estate ricca di attivazioni QRP]
+#sottotitolo-sezione[Un'estate ricca di attivazioni QRP]
 
 L'estate 2025 ha visto numerose attivazioni da parte dei soci MQC. Ecco un breve riepilogo delle più significative, con le esperienze raccontate direttamente dai protagonisti.
 
@@ -103,7 +106,7 @@ Luca IZ5ABC ha preferito le quote più accessibili dell'Appennino, attivando una
 
 = Costruiamo un RTX QRP per i 40m <rtx-40m>
 
-#sottotitolo[Un progetto semplice per iniziare con l'autocostruzione]
+#sottotitolo-sezione[Un progetto semplice per iniziare con l'autocostruzione]
 #autore("IK0BDO", nome: "Roberto")
 
 Molti soci mi chiedono da dove iniziare con l'autocostruzione. La risposta è sempre la stessa: partite da qualcosa di semplice ma funzionale. Un trasmettitore CW per i 40 metri è il progetto ideale.
@@ -136,8 +139,6 @@ La taratura è semplice: regolare il trimmer del VXO per centrare la frequenza d
 
 Con un'alimentazione a 12V si ottengono circa 3-4W, sufficienti per collegamenti DX in CW. Ho testato il TX durante il weekend e sono riuscito a collegare diverse stazioni europee, inclusa una S5 che mi ha dato 559.
 
-#figura("assets/breakout-board.jpg", didascalia: "Setup di test con breakout board", width: 90%)
-
 #separatore()
 
 // ============================================
@@ -146,7 +147,7 @@ Con un'alimentazione a 12V si ottengono circa 3-4W, sufficienti per collegamenti
 
 = Attivazione con Bivacco al Corno Grande <corno-grande>
 
-#sottotitolo[Un'avventura radio in alta quota]
+#sottotitolo-sezione[Un'avventura radio in alta quota]
 #autore("IZ8TXC", nome: "Eugenio")
 
 Riportiamo questa attivazione di Eugenio IZ8TXC, sicuramente meritevole di condivisione per l'impegno e la passione dimostrati.
@@ -172,9 +173,9 @@ La gente è iniziata a venire già delle 3:30 di notte per vedere l'alba. Alla f
 
 *Radio utilizzate:* ICOM ID-51 e AnyTone 878
 
-#figura("assets/corno-grande-1.jpg", didascalia: "In vetta al Corno Grande", width: 85%)
+#figura("assets/corno-grande-1.jpg", didascalia: "In vetta al Corno Grande", larghezza: 85%)
 
-#figura("assets/corno-grande-2.jpg", didascalia: "Operazione notturna", width: 85%)
+#figura("assets/corno-grande-2.jpg", didascalia: "Operazione notturna", larghezza: 85%)
 
 #separatore()
 
@@ -184,7 +185,7 @@ La gente è iniziata a venire già delle 3:30 di notte per vedere l'alba. Alla f
 
 = Nuovi Soci <nuovi-soci>
 
-#sottotitolo[Benvenuti nella famiglia MQC!]
+#sottotitolo-sezione[Benvenuti nella famiglia MQC!]
 
 Diamo il benvenuto ai nuovi iscritti dell'ultimo periodo:
 

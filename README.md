@@ -2,9 +2,7 @@
 
 Template per generare automaticamente il **GEKO Radio Magazine** del Mountain QRP Club.
 
-Layout a **due colonne** con supporto per copertina, sommario automatico, tabelle stile GEKO, box evidenza e gestione immagini.
-
-![Esempio output](output/preview.png)
+Copertina a due colonne, sommario automatico, tabelle stile GEKO, box evidenza e gestione immagini.
 
 ## 🚀 Quick Start
 
@@ -28,7 +26,7 @@ geko-template/
 │   ├── copertina-contest.jpg
 │   ├── logo-mqc-grande.png
 │   └── ...
-├── output/               # PDF generati
+├── output/               # PDF generati (creata da build.py -o)
 ├── README.md
 ├── LICENSE
 └── .gitignore
@@ -57,8 +55,11 @@ geko-template/
 
 // PAGINA LOGO (opzionale)
 #pagina-logo(
-  logo-grande: "assets/logo-mqc-grande.png",
-  sottotitolo: "Rivista aperiodica del Mountain QRP Club",
+  numero: "68",
+  mese: "Ottobre",
+  anno: "2025",
+  logo-rivista: "assets/logo-mqc-grande.png",
+  sottotitolo-testo: "Rivista aperiodica del Mountain QRP Club",
 )
 
 // CONTENUTO PRINCIPALE
@@ -69,7 +70,7 @@ geko-template/
 )
 
 // SOMMARIO (automatico)
-#sommario()
+#sommario(numero: "68", mese: "Ottobre", anno: "2025")
 
 // ARTICOLI
 = Titolo Articolo
@@ -77,15 +78,20 @@ geko-template/
 Contenuto...
 ```
 
+> `numero`, `mese` e `anno` vanno passati a **ogni** funzione di pagina
+> (`copertina`, `pagina-logo`, `sommario`, `geko-magazine`): sono parametri
+> con default (`"66"`, `"Agosto"`, `"2025"`), quindi se mancano la compilazione
+> non fallisce ma il footer mostra il numero sbagliato.
+
 ### 2. Funzioni disponibili
 
 #### Titoli e metadati
 ```typst
-= Titolo Principale        // heading level 1 → stile GEKO
-== Sottosezione            // heading level 2
+= Titolo Principale        // heading level 1 → titolo articolo, nuova pagina
+== Sottosezione            // heading level 2 → maiuscolo magenta
 === Sotto-sottosezione     // heading level 3
 
-#sottotitolo[Testo in corsivo magenta]
+#sottotitolo-sezione[Testo]   // maiuscolo grassetto magenta
 #autore("IU3QEZ", nome: "Simone")
 ```
 
@@ -94,11 +100,14 @@ Contenuto...
 #box-evidenza(titolo: "Nota importante")[
   Contenuto con sfondo grigio e bordo oro.
 ]
+
+// Varianti di colore (stile GitHub alert): note (default), tip, warning, important, caution
+#box-evidenza(titolo: "Attenzione", tipo: "warning")[...]
 ```
 
 #### Immagini con didascalia
 ```typst
-#figura("assets/foto.jpg", didascalia: "Descrizione", width: 80%)
+#figura("assets/foto.jpg", didascalia: "Descrizione", larghezza: 80%)
 ```
 
 #### Tabelle stile GEKO
@@ -129,16 +138,17 @@ Contenuto...
 | `geko-gold` | `#C4A35A` | Titoli, accenti, header tabelle |
 | `geko-magenta` | `#C7338C` | Link, sottotitoli, evidenze |
 | `geko-dark` | `#333333` | Testo principale |
-| `geko-light` | `#F5F5F5` | Sfondi box |
+| `geko-light` | `#F8F8F8` | Sfondi box, righe alternate tabelle |
+| `geko-white` | `#FFFFFF` | Bianco |
 
 ## 📐 Layout
 
 - **Formato:** A4
-- **Colonne:** 2 (automatico)
-- **Margini:** 1.8cm laterali, 2.5cm top, 2cm bottom
-- **Font:** Linux Libertine (serif)
-- **Header:** da pagina 3 in poi
-- **Footer:** numero pagina in box oro
+- **Colonne:** articoli a colonna singola; copertina a due colonne
+- **Margini:** 2cm laterali, 2.5cm top, 2cm bottom
+- **Font:** Latin Modern Roman 12pt (fallback: DejaVu Serif, FreeSerif)
+- **Header:** titolo rivista + numero pagina in box oro, linea oro (pagine articoli)
+- **Footer:** "Geko Radio Magazine – Nr. … | mese - anno"
 
 ## 🔧 Personalizzazione
 
@@ -153,17 +163,18 @@ Modifica le variabili all'inizio di `template.typ`:
 ### Cambiare il font
 ```typst
 set text(
-  font: "Libertinus Serif",  // o altro font installato
-  size: 10pt,
+  font: ("Latin Modern Roman", "DejaVu Serif"),  // o altro font installato
+  size: 12pt,
 )
 ```
 
 ## ❓ Troubleshooting
 
-**Errore font non trovato:**
+**Il PDF esce in DejaVu Serif invece di Latin Modern:**
+Typst non segnala il font mancante, usa il fallback. Installa Latin Modern:
 ```bash
 # Ubuntu/Debian
-sudo apt install fonts-linuxlibertine
+sudo apt install fonts-lmodern
 ```
 
 **Import non funziona:**

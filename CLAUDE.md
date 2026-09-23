@@ -83,7 +83,8 @@ make prod-logs     # log del webapp
 - `geko-gold` (#C4A35A) - Titoli, bordi, header tabelle
 - `geko-magenta` (#C7338C) - Link, sottotitoli, evidenze
 - `geko-dark` (#333333) - Testo principale
-- `geko-light` (#F5F5F5) - Sfondi box
+- `geko-light` (#F8F8F8) - Sfondi box, righe alternate tabelle
+- `geko-white` (#FFFFFF) - Bianco
 
 ### Tipografia (unica per tutto il documento)
 `stile-geko` (font, corpo, gerarchia titoli, link, liste, tabelle) e
@@ -96,20 +97,25 @@ dev/CI/prod; fallback Linux Libertine O, DejaVu Serif). Test:
 `webapp/tests/test_layout_consistency.py`.
 
 ### Funzioni principali
+Tutti i parametri sono **named** (default `numero: "66"`, `mese: "Agosto"`,
+`anno: "2025"`: passarli sempre, altrimenti il footer mostra il numero sbagliato).
 ```typst
-#copertina(numero, mese, anno, immagine-principale, evidenze, ...)
-#pagina-logo(numero, mese, anno, logo-rivista, sottotitolo-testo)
-#geko-magazine.with(numero, mese, anno)  // show rule (pagina + stile-geko)
-#stile-geko                                // solo stile, senza set page
-#sommario()
+#copertina(numero:, mese:, anno:, immagine-principale:, evidenze:, editoriale-testo:, editoriale-autore:)
+#pagina-logo(numero:, mese:, anno:, logo-rivista: "path", sottotitolo-testo: "...")
+#geko-magazine.with(numero:, mese:, anno:)  // show rule (pagina + stile-geko)
+#stile-geko                                  // solo stile, senza set page
+#sommario(numero:, mese:, anno:)
 #titolo-articolo(testo)
-#sottotitolo[testo]
+#sottotitolo-sezione[testo]
 #autore("CALL", nome: "Nome")
-#box-evidenza(titolo: "...")[contenuto]
-#figura("path", didascalia: "...", width: 80%)
-#tabella-geko(headers, rows)
+#box-evidenza(titolo: "...", tipo: "note")[contenuto]  // tipo: note|tip|warning|important|caution
+#figura("path", didascalia: "...", larghezza: 80%)
+#tabella-geko(intestazioni, righe)
 #link-geko("url", testo: "...")
 #separatore()
+#benvenuto-soci(soci:, totale:, logo-club:)
+#pagina-team(membri:, link-iscrizione:)
+#pagina-finale(link-lista-distribuzione:, link-donazione:, immagine-frequenze:, immagine-donazione:)
 ```
 
 ## Webapp Routes

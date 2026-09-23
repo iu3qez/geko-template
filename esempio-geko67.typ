@@ -13,7 +13,7 @@
 
 = Editoriale
 
-#sottotitolo[Bentornati dopo la pausa estiva!]
+#sottotitolo-sezione[Bentornati dopo la pausa estiva!]
 #autore("IU3QEZ", nome: "Simone")
 
 L'estate è volata, ma non siamo rimasti con le mani in mano. Tra attivazioni in quota, sperimentazioni e qualche meritato riposo, la comunità MQC ha continuato a farsi sentire sulle bande.
@@ -32,7 +32,7 @@ Un ringraziamento speciale a tutti coloro che hanno inviato articoli e foto. Il 
 
 = Attività Estive dei Soci
 
-#sottotitolo[Un'estate ricca di attivazioni]
+#sottotitolo-sezione[Un'estate ricca di attivazioni]
 
 L'estate 2025 ha visto numerose attivazioni da parte dei soci MQC. Ecco un breve riepilogo delle più significative.
 
@@ -61,7 +61,7 @@ La sua configurazione leggera, basata su un QCX+ e un'antenna EFHW, si è dimost
 
 = Costruiamo un RTX QRP per i 40m
 
-#sottotitolo[Un progetto semplice per iniziare]
+#sottotitolo-sezione[Un progetto semplice per iniziare]
 #autore("IK0BDO", nome: "Roberto")
 
 Molti soci mi chiedono da dove iniziare con l'autocostruzione. La risposta è sempre la stessa: partite da qualcosa di semplice ma funzionale.
@@ -96,7 +96,7 @@ Ho testato il TX durante il weekend e sono riuscito a collegare diverse stazioni
 
 = Nuovi Soci
 
-#sottotitolo[Benvenuti nella famiglia MQC!]
+#sottotitolo-sezione[Benvenuti nella famiglia MQC!]
 
 Diamo il benvenuto ai nuovi iscritti:
 
