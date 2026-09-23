@@ -89,9 +89,10 @@ Contenuto...
 ```typst
 = Titolo Principale        // heading level 1 → titolo articolo, nuova pagina
 == Sottosezione            // heading level 2 → maiuscolo magenta
-=== Sotto-sottosezione     // heading level 3
+=== Sotto-sottosezione     // heading level 3 → grassetto
+==== Paragrafo             // heading level 4 → grassetto corsivo
 
-#sottotitolo-sezione[Testo]   // maiuscolo grassetto magenta
+#sottotitolo-sezione[Testo]   // occhiello dell'articolo, corsivo magenta
 #autore("IU3QEZ", nome: "Simone")
 ```
 
@@ -146,8 +147,9 @@ Contenuto...
 - **Formato:** A4
 - **Colonne:** articoli a colonna singola; copertina a due colonne
 - **Margini:** 2cm laterali, 2.5cm top, 2cm bottom
-- **Font:** Latin Modern Roman 12pt (fallback: DejaVu Serif, FreeSerif)
-- **Header:** titolo rivista + numero pagina in box oro, linea oro (pagine articoli)
+- **Font:** Libertinus Serif, corpo 11.5pt (incluso in Typst: identico su dev/CI/prod)
+- **Scala titoli:** H1 18pt, H2 14pt, H3 12.5pt, H4 11.5pt (`geko-size`)
+- **Header:** titolo rivista + numero pagina in box oro, linea oro (`pagina-standard`)
 - **Footer:** "Geko Radio Magazine – Nr. … | mese - anno"
 
 ## 🔧 Personalizzazione
@@ -160,22 +162,22 @@ Modifica le variabili all'inizio di `template.typ`:
 #let geko-magenta = rgb("#C7338C")
 ```
 
-### Cambiare il font
+### Cambiare font e dimensioni
+Font e scala tipografica sono definiti una sola volta all'inizio di `template.typ`
+e applicati da `stile-geko` a copertina, pagina logo, sommario e articoli:
+
 ```typst
-set text(
-  font: ("Latin Modern Roman", "DejaVu Serif"),  // o altro font installato
-  size: 12pt,
-)
+#let geko-font = ("Libertinus Serif", "Linux Libertine O", "DejaVu Serif")
+#let geko-size = (corpo: 11.5pt, h1: 18pt, h2: 14pt, h3: 12.5pt, ...)
 ```
 
 ## ❓ Troubleshooting
 
-**Il PDF esce in DejaVu Serif invece di Latin Modern:**
-Typst non segnala il font mancante, usa il fallback. Installa Latin Modern:
-```bash
-# Ubuntu/Debian
-sudo apt install fonts-lmodern
-```
+**Font diverso da quello atteso:**
+Typst non segnala un font mancante, passa in silenzio al successivo della lista.
+Libertinus Serif è incluso in Typst; se in `geko-font` metti un font di sistema,
+verifica che sia installato (`fc-list | grep -i <nome>`) e controlla il PDF con
+`pdffonts`.
 
 **Import non funziona:**
 Assicurati che `template.typ` sia nella stessa cartella del documento.

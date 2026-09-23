@@ -235,6 +235,9 @@ SECRET_KEY=...
   non sarebbe visto dal container. Il doc generato importa `../src/template.typ`.
 - **`ghostscript`** è nell'immagine Docker: serve alla compressione PDF
   (`pdf_compress.py`). Senza, la build produce il PDF non compresso (fail-safe).
+- **Font mancante = fallback silenzioso**: Typst non dà errore se un font di
+  `geko-font` non c'è, passa al successivo. Verificare con `pdffonts` sul PDF
+  (o `test_layout_consistency.py`), non fidarsi del build OK.
 - **Deploy = build locale** via Makefile; GHCR/registry eliminato, la CI gira
   solo i test (`.github/workflows/test.yml`).
 
