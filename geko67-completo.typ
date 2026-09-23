@@ -45,7 +45,7 @@
   numero: "67",
   mese: "Settembre",
   anno: "2025",
-  logo-rivista: "assets/logo-mqc-grande.png",
+  logo-rivista: "assets/sigillo-mqc.svg",
   sottotitolo-testo: "Il GEKO RADIO MAGAZINE – Rivista aperiodica del Mountain QRP Club.",
 )
 

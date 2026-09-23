@@ -6,31 +6,25 @@
 // COLORI ESATTI DALLA RIVISTA
 // ============================================
 
-#let geko-gold = rgb("#C4A35A")      // Oro per box pagina, bordi, titolo SOMMARIO
+#let geko-gold = rgb("#C4A35A")      // Oro per box pagina, filetti, cornici, header tabelle (non per testo)
 #let geko-magenta = rgb("#C7338C")   // Magenta per IN EVIDENZA, titoli articoli, link
 #let geko-dark = rgb("#333333")      // Testo principale scuro
 #let geko-light = rgb("#F8F8F8")     // Sfondo chiaro per tabelle alternate
 #let geko-white = rgb("#FFFFFF")     // Bianco
 
-// ============================================
-// FUNZIONE: Box numero pagina (angolo alto destra)
-// ============================================
+// Oro per TESTO su bianco: geko-gold fa 2.40:1, questo 4.54:1 (WCAG AA).
+// geko-gold resta per filetti, cornici e fondi.
+#let geko-gold-testo = rgb("#8F7233")
 
-#let page-number-box() = {
-  context {
-    let page-num = counter(page).get().first()
-    box(
-      fill: geko-gold,
-      inset: (x: 8pt, y: 4pt),
-      radius: 2pt,
-      text(fill: white, weight: "bold", size: 10pt)[#page-num]
-    )
-  }
-}
+// Colori funzionali (alert e pagina finale), fuori dall'identità oro/magenta
+#let geko-verde = rgb("#2E7D32")     // alert tip — 4.83:1 su geko-light
+#let geko-arancio = rgb("#BA5502")   // alert warning — 4.51:1 (era #ED6C02, 2.93:1)
+#let geko-rosso = rgb("#D32F2F")     // alert caution — 4.69:1
+#let geko-blu = rgb("#1A4A6E")       // appelli della pagina finale
 
 // ============================================
 // SCALA TIPOGRAFICA (unica per tutto il documento)
-// Corpo 11pt; ogni livello di titolo è più grande del corpo e
+// Corpo 11.5pt; ogni livello di titolo è più grande del corpo e
 // distinguibile dal successivo. Usata da `stile-geko`, dalle funzioni
 // titolo/sottotitolo/autore e dalla copertina (editoriale).
 // ============================================
@@ -45,7 +39,33 @@
   sottotitolo: 13pt,
   autore: 10.5pt,
   piccolo: 9pt,  // header/footer, didascalie, tabelle
+  // Elementi fissi (copertina, pagine speciali): tutti i corpi passano da qui
+  minimo: 8pt,           // griglia nuovi soci, bullet
+  nota: 10pt,            // numero pagina, Nr./data, titoli evidenze, nomi team, rimandi
+  invito: 11pt,          // inviti di chiusura (team, pagina finale)
+  invito-forte: 12pt,    // motto pag. 2, "Modulo d'iscrizione", "E siamo N!"
+  etichetta: 14pt,       // EDITORIALE
+  appello-sub: 16pt,     // titolo donazione
+  testata: 18pt,         // "Il Geko Radio Magazine", appelli pagina finale
+  evidenza: 20pt,        // IN EVIDENZA
+  sommario: 22pt,        // SOMMARIO
 )
+
+// ============================================
+// FUNZIONE: Box numero pagina (angolo alto destra)
+// ============================================
+
+#let page-number-box() = {
+  context {
+    let page-num = counter(page).get().first()
+    box(
+      fill: geko-gold,
+      inset: (x: 8pt, y: 4pt),
+      radius: 2pt,
+      text(fill: geko-dark, weight: "bold", size: geko-size.nota)[#page-num]
+    )
+  }
+}
 
 // ============================================
 // FUNZIONE: Titolo articolo principale
@@ -113,11 +133,11 @@
 
   // Tabelle da markdown (cmarker emette #table nativo) con look GEKO
   set table(
-    fill: (x, y) => if y == 0 { geko-gold } else if calc.odd(y) { geko-light } else { white },
+    fill: (x, y) => if y == 0 { geko-gold } else if calc.odd(y) { geko-light } else { geko-white },
     stroke: 0.5pt + geko-dark.lighten(60%),
     inset: 6pt,
   )
-  show table.cell.where(y: 0): set text(fill: white, weight: "bold", size: geko-size.piccolo)
+  show table.cell.where(y: 0): set text(fill: geko-dark, weight: "bold", size: geko-size.piccolo)
   show table: set text(size: geko-size.piccolo)
 
   // H1 = Titolo articolo principale (inizia a pagina nuova)
@@ -154,7 +174,7 @@
   show link: it => text(fill: geko-magenta)[#it]
 
   // Liste puntate con bullet dorato
-  set list(marker: text(fill: geko-gold, size: 8pt)[●])
+  set list(marker: text(fill: geko-gold, size: geko-size.minimo)[●])
 
   // Liste numerate
   set enum(numbering: "1.")
@@ -203,10 +223,10 @@
 // Colori bordo/titolo per tipo di alert (GitHub-style)
 #let _alert-colori = (
   note:      (bordo: geko-gold,        titolo: geko-magenta),
-  tip:       (bordo: rgb("#2E7D32"),   titolo: rgb("#2E7D32")),
-  warning:   (bordo: rgb("#ED6C02"),   titolo: rgb("#ED6C02")),
+  tip:       (bordo: geko-verde,       titolo: geko-verde),
+  warning:   (bordo: geko-arancio,     titolo: geko-arancio),
   important: (bordo: geko-magenta,     titolo: geko-magenta),
-  caution:   (bordo: rgb("#D32F2F"),   titolo: rgb("#D32F2F")),
+  caution:   (bordo: geko-rosso,       titolo: geko-rosso),
 )
 
 #let box-evidenza(titolo: none, tipo: "note", contenuto) = {
@@ -239,13 +259,13 @@
       fill: (col, row) => {
         if row == 0 { geko-gold }
         else if calc.odd(row) { geko-light }
-        else { white }
+        else { geko-white }
       },
       stroke: 0.5pt + geko-dark.lighten(60%),
       inset: 6pt,
       align: (col, row) => if row == 0 { center } else { left },
-      ..intestazioni.map(h => text(fill: white, weight: "bold", size: 9pt)[#h]),
-      ..righe.flatten().map(c => text(size: 9pt)[#c])
+      ..intestazioni.map(h => text(fill: geko-dark, weight: "bold", size: geko-size.piccolo)[#h]),
+      ..righe.flatten().map(c => text(size: geko-size.piccolo)[#c])
     )
   )
 }
@@ -301,7 +321,7 @@
     [
       // Header: numero e data
       #align(right)[
-        #text(size: 10pt, fill: geko-dark)[Nr. #numero | #mese – #anno]
+        #text(size: geko-size.nota, fill: geko-dark)[Nr. #numero | #mese – #anno]
       ]
       #v(1em)
 
@@ -311,7 +331,7 @@
         fill: geko-magenta,
         inset: (x: 14pt, y: 8pt),
         radius: 5pt,
-        align(right, text(size: 20pt, weight: "bold", fill: white, tracking: 1pt)[IN EVIDENZA])
+        align(right, text(size: geko-size.evidenza, weight: "bold", fill: geko-white, tracking: 1pt)[IN EVIDENZA])
       )
 
       #v(1.5em)
@@ -319,9 +339,9 @@
       // Lista evidenze
       #for ev in evidenze {
         block(width: 100%, below: 1em)[
-          #text(size: 10pt, weight: "bold", fill: geko-magenta)[#upper(ev.titolo):]
+          #text(size: geko-size.nota, weight: "bold", fill: geko-magenta)[#upper(ev.titolo):]
           #v(0.25em)
-          #set text(size: 9pt, fill: geko-dark)
+          #set text(size: geko-size.piccolo, fill: geko-dark)
           #set par(justify: true, leading: 0.5em)
           #ev.descrizione
         ]
@@ -335,9 +355,9 @@
       image(immagine-principale, width: 100%)
     }
     v(1.2em)
-    text(size: 18pt, weight: "bold", fill: geko-magenta)[Il Geko Radio Magazine]
+    text(size: geko-size.testata, weight: "bold", fill: geko-magenta)[Il Geko Radio Magazine]
     v(0.3em)
-    text(size: 14pt, weight: "bold", fill: geko-gold)[EDITORIALE]
+    text(size: geko-size.etichetta, weight: "bold", fill: geko-gold-testo)[EDITORIALE]
     v(0.5em)
   }
   // Corpo: eredita font/corpo/paragrafi da stile-geko (identici agli articoli)
@@ -365,7 +385,7 @@
     let pag-continua = counter(page).get().first() + 1
     let nota-continua = {
       v(0.4em)
-      text(size: 10pt, style: "italic", fill: geko-magenta, weight: "bold")[
+      text(size: geko-size.nota, style: "italic", fill: geko-magenta, weight: "bold")[
         → L'editoriale continua a pag. #pag-continua
       ]
     }
@@ -454,7 +474,7 @@
 
     #v(1.5em)
 
-    #text(size: 12pt, style: "italic", weight: "bold", fill: geko-magenta)[#sottotitolo-testo]
+    #text(size: geko-size.invito-forte, style: "italic", weight: "bold", fill: geko-magenta)[#sottotitolo-testo]
   ]
 
   v(2fr)
@@ -472,7 +492,7 @@
   show: stile-geko
 
   // Titolo SOMMARIO
-  text(size: 22pt, weight: "bold", fill: geko-gold, tracking: 1pt)[SOMMARIO]
+  text(size: geko-size.sommario, weight: "bold", fill: geko-gold-testo, tracking: 1pt)[SOMMARIO]
   v(3pt)
   line(length: 100%, stroke: 2pt + geko-gold)
   v(1.2em)
@@ -518,68 +538,6 @@
 }
 
 // ============================================
-// PAGINA TEAM MQC
-// Per la pagina finale con i membri del team
-// ============================================
-
-#let pagina-team(
-  membri: (),
-) = {
-  titolo-articolo("MQC TEAM")
-  
-  // Grid per i membri (3 colonne)
-  if membri.len() > 0 {
-    let cols = 3
-    grid(
-      columns: (1fr,) * cols,
-      gutter: 1em,
-      ..membri.map(m => {
-        align(center)[
-          #if m.at("foto", default: none) != none {
-            image(m.foto, width: 80%)
-          }
-          #v(0.3em)
-          #text(weight: "bold", size: 10pt, fill: geko-magenta)[#m.nominativo #m.nome]
-          #v(0.1em)
-          #text(size: 9pt)[#m.ruolo]
-        ]
-      })
-    )
-  }
-}
-
-// ============================================
-// PAGINA BENVENUTO NUOVI SOCI
-// ============================================
-
-#let benvenuto-soci(
-  soci: (),
-  totale: 0,
-) = {
-  titolo-articolo("Un benvenuto a…")
-  
-  text(size: 10pt)[Ecco i nostri nuovi soci:]
-  v(0.5em)
-  
-  // Tabella soci (5 colonne)
-  if soci.len() > 0 {
-    let cols = 5
-    let rows = calc.ceil(soci.len() / cols)
-    
-    table(
-      columns: (1fr,) * cols,
-      stroke: 0.5pt + geko-dark.lighten(70%),
-      inset: 4pt,
-      ..soci.map(s => text(size: 8pt)[#s])
-    )
-  }
-  
-  v(0.5em)
-  text(size: 11pt, weight: "bold")[E siamo #totale!]
-}
-
-
-// ============================================
 // PAGINA BENVENUTO NUOVI SOCI (pag 19)
 // ============================================
 
@@ -590,7 +548,7 @@
 ) = {
   titolo-articolo("Un benvenuto a…")
   
-  text(size: 10pt)[Ecco i nostri nuovi soci:]
+  text(size: geko-size.nota)[Ecco i nostri nuovi soci:]
   v(0.8em)
   
   // Tabella soci (5 colonne)
@@ -600,12 +558,12 @@
       stroke: 0.5pt + geko-dark.lighten(70%),
       inset: 5pt,
       align: center,
-      ..soci.map(s => text(size: 8pt)[#s])
+      ..soci.map(s => text(size: geko-size.minimo)[#s])
     )
   }
   
   v(0.8em)
-  text(size: 12pt, weight: "bold")[E siamo #totale!]
+  text(size: geko-size.invito-forte, weight: "bold")[E siamo #totale!]
   
   // Logo club centrato
   if logo-club != none {
@@ -637,12 +595,12 @@
           image(m.foto, width: 90%)
         }
         #v(0.4em)
-        #text(weight: "bold", size: 10pt, fill: geko-magenta)[#m.nominativo #m.nome]
+        #text(weight: "bold", size: geko-size.nota, fill: geko-magenta)[#m.nominativo #m.nome]
         #v(0.15em)
-        #text(size: 9pt)[#m.ruolo]
+        #text(size: geko-size.piccolo)[#m.ruolo]
         #if m.at("ruolo2", default: none) != none {
           linebreak()
-          text(size: 9pt)[#m.ruolo2]
+          text(size: geko-size.piccolo)[#m.ruolo2]
         }
       ]
     }
@@ -695,21 +653,21 @@
   
   // Link iscrizione
   align(center)[
-    #text(size: 11pt)[Per iscriversi al nostro club:]
+    #text(size: geko-size.invito)[Per iscriversi al nostro club:]
     #v(0.3em)
     #if link-iscrizione != none {
-      link(link-iscrizione, text(size: 12pt, weight: "bold", fill: geko-magenta)[Modulo d'iscrizione])
+      link(link-iscrizione, text(size: geko-size.invito-forte, weight: "bold", fill: geko-magenta)[Modulo d'iscrizione])
     } else {
-      text(size: 12pt, weight: "bold", fill: geko-magenta)[Modulo d'iscrizione]
+      text(size: geko-size.invito-forte, weight: "bold", fill: geko-magenta)[Modulo d'iscrizione]
     }
   ]
   
   v(1em)
   
   align(center)[
-    #text(size: 11pt, weight: "bold")[Sono graditi i contributi dei lettori, particolarmente con articoli]
+    #text(size: geko-size.invito, weight: "bold")[Sono graditi i contributi dei lettori, particolarmente con articoli]
     #linebreak()
-    #text(size: 11pt, weight: "bold")[tecnici e di autocostruzione.]
+    #text(size: geko-size.invito, weight: "bold")[tecnici e di autocostruzione.]
   ]
 }
 
@@ -728,41 +686,41 @@
   
   // Invito lista distribuzione
   align(center)[
-    #text(size: 11pt)[Per chi desidera ricevere questo Bollettino può iscriversi alla]
+    #text(size: geko-size.invito)[Per chi desidera ricevere questo Bollettino può iscriversi alla]
     #linebreak()
-    #text(size: 11pt)[nostra ]
+    #text(size: geko-size.invito)[nostra ]
     #if link-lista-distribuzione != none {
       link(link-lista-distribuzione, text(weight: "bold", fill: geko-magenta)[Lista di Distribuzione])
     } else {
       text(weight: "bold", fill: geko-magenta)[Lista di Distribuzione]
     }
-    #text(size: 11pt)[.]
+    #text(size: geko-size.invito)[.]
   ]
   
   v(2em)
   
   // Invito diffusione - testo grande blu scuro
   align(center)[
-    #text(size: 18pt, weight: "bold", fill: rgb("#1a4a6e"))[Diffondete il Geko Radio Magazine]
+    #text(size: geko-size.testata, weight: "bold", fill: geko-blu)[Diffondete il Geko Radio Magazine]
     #linebreak()
-    #text(size: 18pt, weight: "bold", fill: rgb("#1a4a6e"))[fra i Vostri amici.]
+    #text(size: geko-size.testata, weight: "bold", fill: geko-blu)[fra i Vostri amici.]
   ]
   
   v(2.5em)
   
   // Sezione donazione
   align(center)[
-    #text(size: 16pt, weight: "bold", fill: rgb("#1a4a6e"))[Aiutaci a sostenere il Mountain QRP Club!]
+    #text(size: geko-size.appello-sub, weight: "bold", fill: geko-blu)[Aiutaci a sostenere il Mountain QRP Club!]
   ]
   
   v(1em)
   
   align(center)[
-    #text(size: 10pt)[Ci stiamo mettendo tanta dedizione per offrirti un servizio sempre ai massimi livelli. Un tuo]
+    #text(size: geko-size.nota)[Ci stiamo mettendo tanta dedizione per offrirti un servizio sempre ai massimi livelli. Un tuo]
     #linebreak()
-    #text(size: 10pt)[piccolo contributo è importante, anche del valore di un semplice caffè.]
+    #text(size: geko-size.nota)[piccolo contributo è importante, anche del valore di un semplice caffè.]
     #linebreak()
-    #text(size: 10pt)[Grazie.]
+    #text(size: geko-size.nota)[Grazie.]
   ]
   
   v(1.5em)
