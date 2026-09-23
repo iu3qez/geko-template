@@ -288,11 +288,15 @@
   // via cmarker) deve avere la stessa resa grafica del resto della rivista.
   show: stile-geko
 
+  // Spigoli arrotondati delle due cornici dorate
+  let raggio-cornice = 10pt
+
   // Colonna destra (IN EVIDENZA) — invariata, estratta per riuso
   let colonna-destra = block(
     width: 100%,
     height: 100%,
     stroke: 3pt + geko-gold,
+    radius: raggio-cornice,
     inset: 12pt,
     [
       // Header: numero e data
@@ -306,7 +310,7 @@
         width: 100%,
         fill: geko-magenta,
         inset: (x: 14pt, y: 8pt),
-        radius: 0pt,
+        radius: 5pt,
         align(right, text(size: 20pt, weight: "bold", fill: white, tracking: 1pt)[IN EVIDENZA])
       )
 
@@ -370,20 +374,32 @@
     let spazio-inline = altezza-interna - h-intestazione - h-firma
     let overflow = editoriale-testo != none and h-editoriale > spazio-inline
 
+    // Teaser troncato a riga intera: un clip ad altezza fissa taglierebbe
+    // l'ultima riga a metà. Il testo viene invece impaginato in 2 colonne
+    // alte quanto lo spazio residuo: il flusso di Typst va a capo colonna
+    // solo tra righe intere, e il box esterno mostra solo la prima colonna.
+    let teaser = layout(spazio => {
+      let g = 1cm
+      box(width: spazio.width, height: spazio.height, clip: true,
+        block(width: 2 * spazio.width + g, height: spazio.height,
+          columns(2, gutter: g, corpo-editoriale)))
+    })
+
     // Il layout della colonna usa un grid (auto, 1fr, auto): la riga centrale
-    // riempie esattamente lo spazio residuo, così il teaser (clip) e la nota/firma
+    // riempie esattamente lo spazio residuo, così il teaser e la nota/firma
     // restano sempre dentro il box, senza calcoli d'altezza a mano.
     let colonna-sinistra = block(
       width: 100%,
       height: 100%,
       stroke: 3pt + geko-gold,
+      radius: raggio-cornice,
       inset: 12pt,
       grid(
         rows: (auto, 1fr, auto),
         row-gutter: 0pt,
         intestazione,
         if overflow {
-          block(width: 100%, height: 100%, clip: true, corpo-editoriale)
+          teaser
         } else {
           corpo-editoriale
         },
