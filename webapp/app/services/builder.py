@@ -186,7 +186,7 @@ class MagazineBuilder:
   numero: "{numero}",
   mese: "{mese}",
   anno: "{anno}",
-  logo-rivista: "/typst/assets/logo_rivista.jpg",
+  logo-rivista: "/typst/assets/sigillo-mqc.svg",
   sottotitolo-testo: "Il GEKO RADIO MAGAZINE – Rivista aperiodica del Mountain QRP Club.",
 )''')
         parts.append('')

@@ -80,11 +80,15 @@ make prod-logs     # log del webapp
 ## Template Typst
 
 ### Colori definiti
-- `geko-gold` (#C4A35A) - Titoli, bordi, header tabelle
-- `geko-magenta` (#C7338C) - Link, sottotitoli, evidenze
+- `geko-gold` (#C4A35A) - Filetti, cornici, bullet, fondo box pagina e header tabelle (testo sopra in `geko-dark`, 5.25:1). **Mai come colore di testo su bianco** (2.40:1)
+- `geko-gold-testo` (#8F7233) - Oro per testo su bianco (EDITORIALE, SOMMARIO): 4.54:1
+- `geko-magenta` (#C7338C) - Titoli H1/H2, link, sottotitoli, evidenze
 - `geko-dark` (#333333) - Testo principale
 - `geko-light` (#F8F8F8) - Sfondi box, righe alternate tabelle
-- `geko-white` (#FFFFFF) - Bianco
+- `geko-white` (#FFFFFF) - Bianco (usare questo, non il `white` built-in)
+- Funzionali: `geko-verde` / `geko-arancio` / `geko-rosso` (alert tip/warning/caution, tutti ≥4.5:1 su `geko-light`), `geko-blu` (pagina finale)
+
+Nessun `rgb()` né corpo in pt scritto a mano fuori dalle definizioni: colori dalle variabili `geko-*`, corpi da `geko-size`.
 
 ### Tipografia (unica per tutto il documento)
 `stile-geko` (font, corpo, gerarchia titoli, link, liste, tabelle) e
@@ -101,7 +105,7 @@ Tutti i parametri sono **named** (default `numero: "66"`, `mese: "Agosto"`,
 `anno: "2025"`: passarli sempre, altrimenti il footer mostra il numero sbagliato).
 ```typst
 #copertina(numero:, mese:, anno:, immagine-principale:, evidenze:, editoriale-testo:, editoriale-autore:)
-#pagina-logo(numero:, mese:, anno:, logo-rivista: "path", sottotitolo-testo: "...")
+#pagina-logo(numero:, mese:, anno:, logo-rivista: "assets/sigillo-mqc.svg", sottotitolo-testo: "...")
 #geko-magazine.with(numero:, mese:, anno:)  // show rule (pagina + stile-geko)
 #stile-geko                                  // solo stile, senza set page
 #sommario(numero:, mese:, anno:)

@@ -24,7 +24,7 @@ geko-template/
 ├── build.py              # Script per compilare in PDF
 ├── assets/               # Immagini, loghi
 │   ├── copertina-contest.jpg
-│   ├── logo-mqc-grande.png
+│   ├── sigillo-mqc.svg        # logo MQC (pag. 2)
 │   └── ...
 ├── output/               # PDF generati (creata da build.py -o)
 ├── README.md
@@ -58,7 +58,7 @@ geko-template/
   numero: "68",
   mese: "Ottobre",
   anno: "2025",
-  logo-rivista: "assets/logo-mqc-grande.png",
+  logo-rivista: "assets/sigillo-mqc.svg",
   sottotitolo-testo: "Rivista aperiodica del Mountain QRP Club",
 )
 
